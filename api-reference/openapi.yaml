@@ -1,0 +1,462 @@
+openapi: 3.1.0
+info:
+  title: Sully API
+  description: The Sully API is a robust platform designed to empower healthcare technology companies and Electronic Health Record (EHR) vendors by integrating advanced AI-driven clinical capabilities to help save healthcare providers (HCPs) time and make better decisions.
+  version: "0.1.0"
+servers:
+  - url: https://api.sully.ai
+security:
+  - apiKeyAuth: []
+    accountIdAuth: []
+paths:
+  /api/v2/ext/notes/{noteId}:
+    get:
+      description: Gets a single note based on the ID supplied
+      parameters:
+        - name: noteId
+          in: path
+          description: ID of note to get
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Note response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GetNoteResponse"
+        "400":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      description: Deletes a single note based on the ID supplied
+      parameters:
+        - name: id
+          in: path
+          description: ID of note to delete
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Note deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResponse"
+        "400":
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v2/ext/notes:
+    post:
+      description: Creates a new note
+      requestBody:
+        description: Note to add
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNotePayload"
+        required: true
+      responses:
+        "200":
+          description: Note response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateNoteResponse"
+        "400":
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/v2/ext/note-styles:
+    post:
+      description: Creates a note style
+      requestBody:
+        description: Note style to add
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNoteStylePayload"
+        required: true
+      responses:
+        "200":
+          description: Note style response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateNoteStyleResponse"
+        "400":
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/v2/ext/audio/transcriptions/{transcriptionId}:
+    get:
+      description: Gets a single audio transcription based on the ID supplied
+      parameters:
+        - name: limit
+          in: query
+          description: The maximum number of results to return
+          schema:
+            type: integer
+            format: int32
+      responses:
+        "200":
+          description: Audio transcription response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GetAudioTranscriptionResponse"
+        "400":
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      description: Deletes a single audio transcription based on the ID supplied
+      parameters:
+        - name: id
+          in: path
+          description: ID of audio transcription to delete
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Audio transcription deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResponse"
+        "400":
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v2/ext/audio/transcriptions:
+    post:
+      description: Creates a new audio transcription
+      requestBody:
+        description: Audio transcription to add
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAudioTranscriptionPayload"
+        required: true
+      responses:
+        "200":
+          description: Audio transcription response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateAudioTranscriptionResponse"
+        "400":
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    GetNoteResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+          description: Status of the response
+        data:
+          type: object
+          properties:
+            payload:
+              type: object
+              description: Either markdown or JSON representation of the note. Both can be present as well.
+              properties:
+                markdown:
+                  type: string
+                  description: Markdown string of the note
+                json:
+                  type: object
+                  description: JSON object of the note
+            status:
+              type: string
+              example: STATUS_DONE
+              description: Processing status of the note
+            timestamp:
+              type: object
+              properties:
+                start:
+                  type: integer
+                  example: 1731014849730
+                  description: Start timestamp
+                complete:
+                  type: integer
+                  example: 1731014853958
+                  description: Complete timestamp
+        date:
+          type: string
+          format: date-time
+          example: 2024-11-07T21:27:39Z
+          description: Timestamp of the response
+
+    CreateNotePayload:
+      type: object
+      properties:
+        transcript:
+          type: string
+          required: true
+          example: >-
+            Hey, how's it going? Good good yeah, so what's going on? Yeah, hi I'm
+            Edward yeah hi hi Edward. How's it going? Yeah, good good. So I've been
+            having a couple of issues like my back pain and knee pain.
+        date:
+          type: string
+          format: date
+          description: Date of the patient encounter
+          required: true
+        noteType:
+          type: object
+          properties:
+            description:
+              type: string
+            format:
+              type: string
+              example: json
+              description: Format of the note to generate. Markdown if using a custom note style, JSON if using SOAP or a structured layout.
+              enum:
+                - markdown
+                - json
+            type:
+              type: string
+              default: soap
+              example: soap
+              description: Type of note to generate
+              enum:
+                - soap
+                - custom
+                - layout
+            template:
+              type: string
+              example: >-
+                write standard clinical soap note with 4 sections: Subjective:
+                contains detailed HPI, Objective: contains PE and ROS, Assessment:
+                contains each differential diagnosis along with corresponding plan,
+                and Patient Instructions: contains list of instructions for the
+                patient
+        patientInfo:
+          type: object
+          description: Optional patient information
+          properties:
+            name:
+              type: string
+            dateOfBirth:
+              type: string
+              format: date
+            gender:
+              type: string
+              enum:
+                - male
+                - female
+                - other
+                - prefer not to say
+                - unspecified
+        previousNote:
+          type: string
+          description: Reference to a previous note if this is a follow-up. This field is optional.
+        context:
+          type: string
+          nullable: true
+          description: Additional context for note generation. This field is optional.
+        instructions:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: Special instructions for note generation. This field is optional.
+        fixMedications:
+          type: boolean
+          default: false
+          description: Whether to fix spelling errors in medications. This field is optional.
+        medicationList:
+          type: string
+          description: List of up to 50 medications (comma separated) to use as reference for fixing spelling errors. This field is optional.
+
+    CreateNoteResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+          description: Status of the response
+        data:
+          type: object
+          properties:
+            noteId:
+              type: string
+              example: note_14266a21-e7e7-43ab-b8f8-7290e5451b79
+              description: Unique identifier for the created note
+        date:
+          type: string
+          format: date-time
+          example: 2024-11-07T21:24:51Z
+          description: Timestamp of the response
+
+    CreateNoteStylePayload:
+      type: object
+      properties:
+        sampleNote:
+          type: string
+          description: Sample note text to base the style on
+          required: true
+
+        instructions:
+          type: array
+          items:
+            type: string
+          description: Optional instructions for note generation
+          default: []
+
+    CreateNoteStyleResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Status of the response
+        data:
+          type: object
+          properties:
+            noteStyleId:
+              type: string
+              description: Unique identifier for the created note style
+            noteStyle:
+              type: string
+              description: The created note style
+        date:
+          type: string
+          format: date-time
+          description: Timestamp of the response
+
+    GetAudioTranscriptionResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+          description: Status of the response
+        data:
+          type: object
+          properties:
+            payload:
+              type: object
+              description: Either markdown or JSON representation of the note. Both can be present as well.
+              properties:
+                markdown:
+                  type: string
+                  description: Markdown string of the note
+                json:
+                  type: object
+                  description: JSON object of the note
+            status:
+              type: string
+              example: STATUS_DONE
+              description: Processing status of the note
+            timestamp:
+              type: object
+              properties:
+                start:
+                  type: integer
+                  example: 1731014849730
+                  description: Start timestamp
+                complete:
+                  type: integer
+                  example: 1731014853958
+                  description: Complete timestamp
+        date:
+          type: string
+          format: date-time
+          example: 2024-11-07T21:27:39Z
+          description: Timestamp of the response
+
+    CreateAudioTranscriptionPayload:
+      type: object
+      properties:
+        audio:
+          type: string
+          format: binary
+          description: >-
+            Audio file to transcribe (supported formats: wav, mp3, m4a, ogg)
+          required: true
+        language:
+          type: string
+          description: >-
+            Language code for transcription:
+
+            - English (en-US, en-GB)
+            - Spanish (es)
+            - French (fr)
+            - German (de)
+            - Italian (it)
+            - Portuguese (pt)
+            - Dutch (nl)
+            - Japanese (ja)
+            - Korean (ko)
+            - Chinese (zh)
+            - Russian (ru)
+
+    CreateAudioTranscriptionResponse:
+      type: string
+
+    DeleteResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+          description: Status of the response
+        date:
+          type: string
+          format: date-time
+          example: 2024-11-21T14:38:24.093Z
+          description: Timestamp of the response
+
+    Error:
+      required:
+        - error
+        - message
+      type: object
+      properties:
+        error:
+          type: integer
+          format: int32
+        message:
+          type: string
+
+  securitySchemes:
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+    accountIdAuth:
+      type: apiKey
+      in: header
+      name: X-ACCOUNT-ID
