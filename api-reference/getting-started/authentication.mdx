@@ -3,12 +3,11 @@ title: "Authentication"
 description: ""
 ---
 
-All requests to the Sully API must include an `x-api-key` header with your API key and an `x-account-id` header with your Account ID.
+All requests to the Sully API must include an `x-api-key` header with your API key.
 
 ## Example
 
 ```shell
 curl https://api.sully.ai/path \
-  --header 'X-API-KEY: <api-key>' \
-  --header 'X-ACCOUNT-ID: <account-id>'
+  --header 'X-API-KEY: <api-key>'
 ```

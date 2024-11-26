@@ -7,12 +7,12 @@
   },
   "favicon": "/favicon.png",
   "colors": {
-    "primary": "#0D9373",
-    "light": "#07C983",
-    "dark": "#0D9373",
+    "primary": "#0C57F5",
+    "light": "#0C57F5",
+    "dark": "#0C57F5",
     "anchors": {
-      "from": "#0D9373",
-      "to": "#07C983"
+      "from": "#0C57F5",
+      "to": "#0C57F5"
     }
   },
   "topbarLinks": [
@@ -60,7 +60,8 @@
       "pages": [
         "api-reference/audio-transcriptions/get",
         "api-reference/audio-transcriptions/create",
-        "api-reference/audio-transcriptions/delete"
+        "api-reference/audio-transcriptions/delete",
+        "api-reference/audio-transcriptions/streaming"
       ]
     }
   ],

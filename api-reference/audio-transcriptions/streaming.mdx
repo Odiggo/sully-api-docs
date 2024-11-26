@@ -1,0 +1,56 @@
+---
+title: "Streaming"
+icon: "comments"
+---
+
+This API provides streaming speech-to-text transcriptions using WebSockets.
+
+<Note>
+Endpoint:<br/>`wss://api.sully.ai/v1/audio/transcriptions/stream?sample_rate=16000`
+</Note>
+
+# When to use
+
+The Speech-to-Text Websockets API is designed to generate text from partial audio input. It's well-suited for scenarios where the input audio is being streamed or generated in chunks.
+
+# Protocol
+
+The WebSocket API uses a bidirectional protocol that encodes all messages as JSON objects.
+
+# Streaming input audio
+
+The client can send messages with audio input to the server. The messages can contain the following fields:
+```json
+{
+  "audio": "Y3VyaW91cyBtaW5kcyB0aGluayBhbGlrZSA6KQ=="
+}
+```
+
+<ParamField body="audio" type="string" required>
+    A generated partial audio chunk encoded as a base64 string.
+</ParamField>
+
+## Streaming output audio
+
+The server will always respond with a message containing the following fields:
+
+```json Response message
+{
+    "isFinal": false,
+    "text": "Hello, world"
+}
+```
+
+<ResponseField name="isFinal" type="boolean" optional="true">
+  Indicates if the generation is complete.
+</ResponseField>
+
+<ResponseField name="text" type="string" optional="true">
+  The processed text sequence.
+</ResponseField>
+
+## Query parameters
+
+<ParamField query="sample_rate" type="string">
+    The sample rate of your submitted audio.
+</ParamField>

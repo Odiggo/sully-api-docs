@@ -7,7 +7,6 @@ servers:
   - url: https://api.sully.ai
 security:
   - apiKeyAuth: []
-    accountIdAuth: []
 paths:
   /api/v2/ext/notes/{noteId}:
     get:
@@ -456,7 +455,3 @@ components:
       type: apiKey
       in: header
       name: X-API-KEY
-    accountIdAuth:
-      type: apiKey
-      in: header
-      name: X-ACCOUNT-ID
