@@ -5,6 +5,9 @@ info:
   version: "0.1.0"
 servers:
   - url: https://api.sully.ai
+    description: Sully Production API
+  - url: https://api-testing.sully.ai
+    description: Sully Testing API
 security:
   - apiKeyAuth: []
     accountIdAuth: []
