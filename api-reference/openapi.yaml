@@ -4,10 +4,10 @@ info:
   description: The Sully API is a robust platform designed to empower healthcare technology companies and Electronic Health Record (EHR) vendors by integrating advanced AI-driven clinical capabilities to help save healthcare providers (HCPs) time and make better decisions.
   version: "0.1.0"
 servers:
-  - url: https://api.sully.ai
-    description: Sully Production API
   - url: https://api-testing.sully.ai
     description: Sully Testing API
+  - url: https://api.sully.ai
+    description: Sully Production API
 security:
   - apiKeyAuth: []
     accountIdAuth: []
