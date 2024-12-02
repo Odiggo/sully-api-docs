@@ -161,7 +161,7 @@ paths:
       requestBody:
         description: Audio transcription to add
         content:
-          application/json:
+          multipart/form-data:
             schema:
               $ref: "#/components/schemas/CreateAudioTranscriptionPayload"
         required: true
@@ -408,7 +408,6 @@ components:
           format: binary
           description: >-
             Audio file to transcribe (supported formats: wav, mp3, m4a, ogg)
-          required: true
         language:
           type: string
           description: >-
@@ -425,6 +424,9 @@ components:
             - Korean (ko)
             - Chinese (zh)
             - Russian (ru)
+          example: en-US
+      required:
+        - audio
 
     CreateAudioTranscriptionResponse:
       type: string
