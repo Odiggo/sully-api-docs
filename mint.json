@@ -63,6 +63,10 @@
         "api-reference/audio-transcriptions/delete",
         "api-reference/audio-transcriptions/streaming"
       ]
+    },
+    {
+      "group": "Events",
+      "pages": ["api-reference/events/overview"]
     }
   ],
   "footerSocials": {

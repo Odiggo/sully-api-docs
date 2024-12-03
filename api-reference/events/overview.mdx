@@ -1,0 +1,125 @@
+---
+title: "Overview"
+---
+
+Events capture various changes to API resources.
+By setting up a `webhook` you can be notified when various events occur. 
+This is particularly useful for listening to asynchronous events such as generating notes or audio transcriptions.
+
+## The Event Object
+
+<ResponseField name="type" type="string">
+    The type of the event.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+    Additional data about the event. 
+</ResponseField>
+
+## Types of Events
+
+<ResponseField name="audio_transcription.succeeded">
+    `data` is an audio transcription
+
+    Occurs whenever an audio transcription succeeds.
+
+      <Expandable title="properties" defaultOpen>
+        <ResponseField name="data" type="object">
+        <Expandable title="properties">
+            <ResponseField name="transcriptionId" type="string">
+                The ID of the audio transcription.
+            </ResponseField>
+            <ResponseField name="status" type="string">
+                The status of the audio transcription.
+            </ResponseField>
+            <ResponseField name="payload" type="object">
+                <Expandable title="properties" defaultOpen>
+                    <ResponseField name="transcription" type="string">
+                        The text of the audio transcription.
+                    </ResponseField>
+                </Expandable>
+            </ResponseField>
+            </Expandable>
+        </ResponseField>
+      </Expandable>
+</ResponseField>
+
+<ResponseField name="audio_transcription.failed">
+    Occurs whenever an audio transcription fails.
+
+      <Expandable title="properties" defaultOpen>
+        <ResponseField name="data" type="object">
+        <Expandable title="properties">
+            <ResponseField name="transcriptionId" type="string">
+                The ID of the audio transcription.
+            </ResponseField>
+            <ResponseField name="status" type="string">
+                The status of the audio transcription.
+            </ResponseField>
+            <ResponseField name="error" type="string">
+                The error message of the audio transcription.
+            </ResponseField>
+            </Expandable>
+        </ResponseField>
+      </Expandable>
+</ResponseField>
+
+<ResponseField name="note_generation.succeeded">
+    `data` is a note
+
+    Occurs whenever a note generation succeeds.
+    <Expandable title="properties" defaultOpen>
+        <ResponseField name="data" type="object">
+        <Expandable title="properties">
+            <ResponseField name="status" type="string">
+                The status of the audio transcription.
+            </ResponseField>
+            <ResponseField name="payload" type="object">
+                <Expandable title="properties" defaultOpen>
+                    <ResponseField name="json" type="string">
+                        The JSON representation of the note.
+                    </ResponseField>
+                    <ResponseField name="markdown" type="string">
+                        The markdown representation of the note.
+                    </ResponseField>
+                </Expandable>
+            </ResponseField>
+            <ResponseField name="timestamp" type="object">
+                <Expandable title="properties" defaultOpen>
+                    <ResponseField name="start" type="number">
+                        The start time of the note generation.
+                    </ResponseField>
+                    <ResponseField name="complete" type="number">
+                        The completion time of the note generation.
+                    </ResponseField>
+                </Expandable>
+            </ResponseField>
+            </Expandable>
+        </ResponseField>
+    </Expandable>
+</ResponseField>
+
+<ResponseField name="note_generation.failed">
+    Occurs whenever a note generation fails.
+
+    <Expandable title="properties" defaultOpen>
+        <ResponseField name="data" type="object">
+            <Expandable title="properties">
+                <ResponseField name="status" type="string">
+                    The status of the note generation.
+                </ResponseField>
+                <ResponseField name="timestamp" type="object">
+                    <Expandable title="properties" defaultOpen>
+                        <ResponseField name="start" type="number">
+                            The start time of the note generation.
+                        </ResponseField>
+                        <ResponseField name="complete" type="number">
+                            The completion time of the note generation.
+                        </ResponseField>
+                    </Expandable>
+                </ResponseField>
+            </Expandable>
+        </ResponseField>
+    </Expandable>
+</ResponseField>
+
