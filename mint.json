@@ -67,6 +67,10 @@
     {
       "group": "Events",
       "pages": ["api-reference/events/overview"]
+    },
+    {
+      "group": "Objects",
+      "pages": ["api-reference/objects/soap-note"]
     }
   ],
   "footerSocials": {

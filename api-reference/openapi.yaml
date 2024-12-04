@@ -200,7 +200,8 @@ components:
                   description: Markdown string of the note
                 json:
                   type: object
-                  description: JSON object of the note
+                  description: JSON object of the note. The note style used will determine which fields are present. See the [SOAP Note](/api-reference/objects/soap-note) example.
+
             status:
               type: string
               example: STATUS_DONE
@@ -379,6 +380,7 @@ components:
                 json:
                   type: object
                   description: JSON object of the note
+
             status:
               type: string
               example: STATUS_DONE
@@ -455,6 +457,275 @@ components:
           format: int32
         message:
           type: string
+
+    SoapNote:
+      type: object
+      properties:
+        chief_complaints:
+          type: array
+          items:
+            type: string
+          description: List of chief complaints
+        history_of_present_illness_summary:
+          type: string
+          description: History of Present Illness summary
+        history_of_present_illness:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              detail:
+                type: string
+        physical_exam:
+          type: object
+          properties:
+            vitals:
+              type: object
+              properties:
+                bp:
+                  type: string
+                  description: Blood pressure
+                heart_rate:
+                  type: integer
+                  description: Heart rate
+                respiratory_rate:
+                  type: integer
+                  description: Respiratory rate
+                temperature:
+                  type: integer
+                  description: Temperature
+            general_appearance:
+              type: array
+              items:
+                type: string
+            head:
+              type: array
+              items:
+                type: string
+            eyes:
+              type: array
+              items:
+                type: string
+            ears:
+              type: array
+              items:
+                type: string
+            nose:
+              type: array
+              items:
+                type: string
+            throat:
+              type: array
+              items:
+                type: string
+            neck:
+              type: array
+              items:
+                type: string
+            respiratory:
+              type: array
+              items:
+                type: string
+            cardiovascular:
+              type: array
+              items:
+                type: string
+            gastrointestinal:
+              type: array
+              items:
+                type: string
+            genitourinary:
+              type: array
+              items:
+                type: string
+            neurological:
+              type: array
+              items:
+                type: string
+            musculoskeletal:
+              type: array
+              items:
+                type: string
+            other:
+              type: array
+              items:
+                type: string
+        review_of_systems:
+          type: object
+          properties:
+            general:
+              type: array
+              items:
+                type: string
+            skin:
+              type: array
+              items:
+                type: string
+            head:
+              type: array
+              items:
+                type: string
+            ears:
+              type: array
+              items:
+                type: string
+            eyes:
+              type: array
+              items:
+                type: string
+            nose:
+              type: array
+              items:
+                type: string
+            throat:
+              type: array
+              items:
+                type: string
+            neck:
+              type: array
+              items:
+                type: string
+            breasts:
+              type: array
+              items:
+                type: string
+            respiratory:
+              type: array
+              items:
+                type: string
+            cardiovascular:
+              type: array
+              items:
+                type: string
+            gastrointestinal:
+              type: array
+              items:
+                type: string
+            genitourinary:
+              type: array
+              items:
+                type: string
+            vascular:
+              type: array
+              items:
+                type: string
+            musculoskeletal:
+              type: array
+              items:
+                type: string
+            neurological:
+              type: array
+              items:
+                type: string
+            hematologic:
+              type: array
+              items:
+                type: string
+            endocrine:
+              type: array
+              items:
+                type: string
+            psychiatric:
+              type: array
+              items:
+                type: string
+        subjective:
+          type: object
+          additionalProperties:
+            type: string
+        objective:
+          type: object
+          additionalProperties:
+            type: string
+        assessment_and_plan:
+          type: array
+          items:
+            type: object
+            properties:
+              problem:
+                type: string
+              diagnosis_title:
+                type: string
+              assessment:
+                type: string
+              plan:
+                type: string
+              icd_10:
+                type: object
+                properties:
+                  code:
+                    type: string
+                  description:
+                    type: string
+        past_medical_history:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              status:
+                type: string
+              began:
+                type: string
+              ended:
+                type: string
+                nullable: true
+        family_history:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              relationship:
+                type: string
+              status:
+                type: string
+              began:
+                type: string
+              ended:
+                type: string
+                nullable: true
+        social_history:
+          type: object
+          properties:
+            occupation:
+              type: string
+            marital_status:
+              type: string
+            children:
+              type: string
+        patient_instructions:
+          type: array
+          items:
+            type: string
+        cpt_icd10_code_pairs:
+          type: array
+          items:
+            type: object
+            properties:
+              cpt:
+                type: string
+              icd_10:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    code:
+                      type: string
+                    description:
+                      type: string
+        billing_cpt:
+          type: object
+          additionalProperties:
+            type: string
+        billing_icd10:
+          type: object
+          additionalProperties:
+            type: string
 
   securitySchemes:
     apiKeyAuth:
