@@ -178,6 +178,41 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /v1/audio/transcriptions/stream/token:
+    post:
+      description: Create a temporary authentication token for Streaming Speech-to-Text
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expiresIn:
+                  type: integer
+                  description: Duration of the token in seconds
+                  example: 3600
+                  minimum: 60
+                  maximum: 604800
+              required:
+                - expiresIn
+        required: true
+      responses:
+        "200":
+          description: Audio transcription stream token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: tok_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+        "400":
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
 components:
   schemas:
