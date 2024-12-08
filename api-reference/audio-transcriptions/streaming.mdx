@@ -9,6 +9,26 @@ This API provides streaming speech-to-text transcriptions using WebSockets.
 Endpoint:<br/>`wss://api.sully.ai/v1/audio/transcriptions/stream?sample_rate=16000`
 </Note>
 
+## Headers
+
+<ParamField query="X-API-KEY" type="string">
+    The API key to use for authentication. Required if `token` is not provided.
+</ParamField>
+
+<ParamField query="X-ACCOUNT-ID" type="string" required>
+    The account ID to use for authentication.
+</ParamField>
+
+## Query parameters
+
+<ParamField query="sample_rate" type="string">
+    The sample rate of your submitted audio.
+</ParamField>
+
+<ParamField query="token" type="string">
+    A temporary authentication token. Required if `X-API-KEY` is not provided.
+</ParamField>
+
 # When to use
 
 The Speech-to-Text Websockets API is designed to generate text from partial audio input. It's well-suited for scenarios where the input audio is being streamed or generated in chunks.
@@ -48,9 +68,3 @@ The server will always respond with a message containing the following fields:
 <ResponseField name="text" type="string" optional="true">
   The processed text sequence.
 </ResponseField>
-
-## Query parameters
-
-<ParamField query="sample_rate" type="string">
-    The sample rate of your submitted audio.
-</ParamField>
