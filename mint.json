@@ -67,7 +67,10 @@
     },
     {
       "group": "Events",
-      "pages": ["api-reference/events/overview"]
+      "pages": [
+        "api-reference/events/overview",
+        "api-reference/events/webhooks"
+      ]
     },
     {
       "group": "Objects",

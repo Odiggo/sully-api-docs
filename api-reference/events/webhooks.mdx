@@ -1,0 +1,139 @@
+---
+title: "Webhooks"
+---
+
+Webhooks allow you to receive notifications when certain events occur in your Sully account.
+
+## Webhook Security
+
+Secure your Sully webhook integrations by verifying that incoming requests are authentic. Sully sends an x-sully-signature header with every webhook request, allowing you to validate its integrity.
+
+### Structure of the Signature Header
+The `x-sully-signature` header contains:
+
+- **Timestamp** (`t`): The time when the request was signed.
+- **Signature** (`v1`): A hash-based message authentication code (HMAC) signature.
+
+Example:
+```shell
+x-sully-signature:
+t=1733782652,
+v1=5257a869e7ecebeda32affa62cdca3fa51cad7e77a0e56ff536d0ce8e108d8bd
+```
+
+Sully generates signatures using HMAC with SHA-256. You can use the steps below to verify these signatures.
+
+### Verifying the Webhook Signature
+
+#### 1. Extract the Timestamp and Signature
+Parse the `x-sully-signature` header to retrieve the timestamp (`t`) and the signature (`v1`).
+
+```typescript
+function parseSignatureHeader(header: string): { timestamp: string; signature: string } {
+  const parts = header.split(',').reduce((acc, part) => {
+    const [key, value] = part.split('=');
+    if (key && value) acc[key.trim()] = value.trim();
+    return acc;
+  }, {} as Record<string, string>);
+
+  if (!parts.t || !parts.v1) {
+    throw new Error('Invalid signature header format');
+  }
+
+  return { timestamp: parts.t, signature: parts.v1 };
+}
+```
+
+#### 2. Prepare the `signed_payload` String
+
+The `signed_payload` is a concatenation of:
+
+1. The timestamp string.
+2. A `.` (dot) character.
+3. The raw body of the webhook request.
+
+```typescript
+function createSignedPayload(timestamp: string, body: string): string {
+  return `${timestamp}.${body}`;
+}
+```
+
+#### 3. Compute the Expected Signature
+
+Generate the HMAC-SHA256 signature using:
+
+- Key: Your webhook's signing secret.
+- Message: The signed_payload.
+
+```typescript
+import * as crypto from 'crypto';
+
+function computeSignature(secret: string, payload: string): string {
+  return crypto
+    .createHmac('sha256', secret)
+    .update(payload, 'utf8')
+    .digest('hex');
+}
+```
+
+#### 4. Validate the Signature and Timestamp
+
+1. **Constant-time Comparison**: Protect against timing attacks by using a secure string comparison.
+2. **Timestamp Validation**: Ensure the timestamp is recent (e.g., within 5 minutes) to mitigate replay attacks.
+
+```typescript
+function isValidSignature(
+  header: string,
+  body: string,
+  secret: string,
+  toleranceInSeconds = 300
+): boolean {
+  const { timestamp, signature } = parseSignatureHeader(header);
+
+  // Validate timestamp
+  const currentTime = Math.floor(Date.now() / 1000);
+  if (Math.abs(currentTime - parseInt(timestamp, 10)) > toleranceInSeconds) {
+    return false;
+  }
+
+  // Compute and compare signatures
+  const signedPayload = createSignedPayload(timestamp, body);
+  const expectedSignature = computeSignature(secret, signedPayload);
+  return crypto.timingSafeEqual(
+    Buffer.from(signature, 'hex'),
+    Buffer.from(expectedSignature, 'hex')
+  );
+}
+```
+
+### Full Example
+
+```typescript
+import express from 'express';
+
+const app = express();
+const SIGNING_SECRET = 'your-webhook-signing-secret';
+
+app.post('/webhook', express.text({ type: '*/*' }), (req, res) => {
+  const signatureHeader = req.headers['x-sully-signature'] as string;
+  const rawBody = req.body;
+
+  if (!signatureHeader) {
+    return res.status(400).send('Missing signature header');
+  }
+
+  if (!isValidSignature(signatureHeader, rawBody, SIGNING_SECRET)) {
+    return res.status(403).send('Invalid signature');
+  }
+
+  // Process the webhook
+  res.status(200).send('Webhook received');
+});
+
+app.listen(3000, () => console.log('Server is running on port 3000'));
+```
+
+### Notes
+- Ensure the body passed to isValidSignature is the raw, unparsed payload.
+- Adjust the timestamp tolerance (toleranceInSeconds) based on your security requirements.
+- Log validation errors for debugging but avoid exposing sensitive details.
