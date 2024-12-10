@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Sully API
   description: The Sully API is a robust platform designed to empower healthcare technology companies and Electronic Health Record (EHR) vendors by integrating advanced AI-driven clinical capabilities to help save healthcare providers (HCPs) time and make better decisions.
-  version: "0.1.0"
+  version: "0.2.0"
 servers:
   - url: https://api-testing.sully.ai
     description: Sully Testing API
