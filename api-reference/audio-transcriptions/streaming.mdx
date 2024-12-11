@@ -12,7 +12,11 @@ Endpoint:<br/>`wss://api.sully.ai/v1/audio/transcriptions/stream?sample_rate=160
 ## Headers
 
 <ParamField query="X-API-KEY" type="string">
-    The API key to use for authentication. Required if `token` is not provided.
+    The API key to use for authentication. Required if `X-API-TOKEN` is not provided.
+</ParamField>
+
+<ParamField query="X-API-TOKEN" type="string">
+    The API token to use for authentication. Required if `X-API-KEY` is not provided.
 </ParamField>
 
 <ParamField query="X-ACCOUNT-ID" type="string" required>
