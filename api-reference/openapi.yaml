@@ -28,9 +28,8 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/GetNoteResponse"
+                type: object
+                $ref: "#/components/schemas/GetNoteResponse"
         "400":
           description: Unexpected error
           content:
@@ -123,9 +122,8 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/GetAudioTranscriptionResponse"
+                type: object
+                $ref: "#/components/schemas/GetAudioTranscriptionResponse"
         "400":
           description: Unexpected error
           content:
@@ -226,6 +224,10 @@ components:
         data:
           type: object
           properties:
+            id:
+              type: string
+              example: note_14266a21-e7e7-43ab-b8f8-7290e5451b79
+              description: Unique identifier for the audio transcription
             payload:
               type: object
               description: Either markdown or JSON representation of the note. Both can be present as well.
@@ -381,14 +383,16 @@ components:
         status:
           type: string
           description: Status of the response
+          example: ok
         data:
           type: object
           properties:
             noteStyleId:
               type: string
               description: Unique identifier for the created note style
+              example: note_style_14266a21
             noteStyle:
-              type: string
+              type: object
               description: The created note style
         date:
           type: string
@@ -405,6 +409,10 @@ components:
         data:
           type: object
           properties:
+            id:
+              type: string
+              example: tr_14266a21-e7e7-43ab-b8f8-7290e5451b79
+              description: Unique identifier for the audio transcription
             payload:
               type: object
               description: Either markdown or JSON representation of the note. Both can be present as well.
