@@ -109,13 +109,6 @@ paths:
   /v1/audio/transcriptions/{transcriptionId}:
     get:
       description: Gets a single audio transcription based on the ID supplied
-      parameters:
-        - name: limit
-          in: query
-          description: The maximum number of results to return
-          schema:
-            type: integer
-            format: int32
       responses:
         "200":
           description: Audio transcription response
@@ -417,17 +410,9 @@ components:
               type: object
               description: Either markdown or JSON representation of the note. Both can be present as well.
               properties:
-                markdown:
+                transcription:
                   type: string
-                  description: Markdown string of the note
-                json:
-                  type: object
-                  description: JSON object of the note
-
-            status:
-              type: string
-              example: STATUS_DONE
-              description: Processing status of the note
+                  description: Transcription of the audio
             timestamp:
               type: object
               properties:
