@@ -273,30 +273,39 @@ components:
           properties:
             description:
               type: string
+              description: A brief overview of the note.
             format:
               type: string
-              example: json
-              description: Format of the note to generate. Markdown if using a custom note style, JSON if using SOAP or a structured layout.
+              description: >-
+                Specifies the format of the note. Use `markdown` for custom note styles or 
+                `json` for structured layouts like SOAP.
               enum:
                 - markdown
                 - json
+              example: json
             type:
               type: string
-              default: soap
-              example: soap
-              description: Type of note to generate
+              description: >-
+                Determines the type of note to generate. Use `custom` to provide a custom 
+                template or `soap` for the default SOAP template.
               enum:
                 - soap
                 - custom
-                - layout
+              default: soap
+              example: soap
             template:
               type: string
+              description: >-
+                Custom template to generate the note. This is applicable only when `type` 
+                is set to `custom`. Include details for sections such as Subjective, 
+                Objective, Assessment, and Patient Instructions.
               example: >-
-                write standard clinical soap note with 4 sections: Subjective:
-                contains detailed HPI, Objective: contains PE and ROS, Assessment:
-                contains each differential diagnosis along with corresponding plan,
-                and Patient Instructions: contains list of instructions for the
-                patient
+                write a standard clinical SOAP note with the following sections:
+                - **Subjective**: Contains detailed HPI.
+                - **Objective**: Contains PE and ROS.
+                - **Assessment**: Contains differential diagnoses with corresponding plans.
+                - **Patient Instructions**: Contains a list of instructions for the patient.
+
         patientInfo:
           type: object
           description: Optional patient information
@@ -380,13 +389,10 @@ components:
         data:
           type: object
           properties:
-            noteStyleId:
+            template:
               type: string
-              description: Unique identifier for the created note style
-              example: note_style_14266a21
-            noteStyle:
-              type: object
               description: The created note style
+              example: "[POPULATE THIS TEMPLATE WITH THE INFORMATION FROM THE ENCOUNTER ONLY. DO NOT MAKE ANY ASSUMPTIONS. WRITE THE NOTE FROM THE PHYSICIAN'S PERSPECTIVE. DO NOT MISS ANY DETAIL IN EACH SECTION. MAKE SURE EVERY RELEVANT SENTENCE IN THE TRANSCRIPT IS ACCOUNTED FOR IN THE NOTE PRODUCED.]\n\n[INCLUDE DATE OF ENCOUNTER]\n\nCC: [INSERT CHIEF COMPLAINT]\n\nHPI:\n[SUMMARIZE THE HISTORY OF PRESENT ILLNESS IN PARAGRAPH FORM, FOLLOWING THESE GUIDELINES:]\n•..."
         date:
           type: string
           format: date-time
