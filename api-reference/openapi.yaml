@@ -665,14 +665,6 @@ components:
               type: array
               items:
                 type: string
-        subjective:
-          type: object
-          additionalProperties:
-            type: string
-        objective:
-          type: object
-          additionalProperties:
-            type: string
         assessment_and_plan:
           type: array
           items:
