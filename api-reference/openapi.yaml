@@ -283,7 +283,7 @@ components:
                 - soap
                 - custom
               default: soap
-              example: soap
+              example: custom
             template:
               type: string
               description: >-
