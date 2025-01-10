@@ -274,15 +274,6 @@ components:
             description:
               type: string
               description: A brief overview of the note.
-            format:
-              type: string
-              description: >-
-                Specifies the format of the note. Use `markdown` for custom note styles or 
-                `json` for structured layouts like SOAP.
-              enum:
-                - markdown
-                - json
-              example: json
             type:
               type: string
               description: >-
@@ -305,6 +296,14 @@ components:
                 - **Objective**: Contains PE and ROS.
                 - **Assessment**: Contains differential diagnoses with corresponding plans.
                 - **Patient Instructions**: Contains a list of instructions for the patient.
+            includeJson:
+              type: boolean
+              description: >-
+                Determines whether to include a JSON payload in the custom note output. 
+                This option is applicable only for custom notes and defaults to `false`. 
+                Enabling this will increase latency and payload size.
+              default: false
+              example: true
 
         patientInfo:
           type: object
