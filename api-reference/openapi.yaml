@@ -335,10 +335,6 @@ components:
             type: string
           nullable: true
           description: Special instructions for note generation. This field is optional.
-        fixMedications:
-          type: boolean
-          default: false
-          description: Whether to fix spelling errors in medications. This field is optional.
         medicationList:
           type: string
           description: List of up to 50 medications (comma separated) to use as reference for fixing spelling errors. This field is optional.
