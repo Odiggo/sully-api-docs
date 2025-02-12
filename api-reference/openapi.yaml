@@ -288,8 +288,7 @@ components:
               type: string
               description: >-
                 Custom template to generate the note. This is applicable only when `type` 
-                is set to `custom`. Include details for sections such as Subjective, 
-                Objective, Assessment, and Patient Instructions.
+                is set to `custom`. This will typically be a note style created using the note style API.
               example: >-
                 write a standard clinical SOAP note with the following sections:
                 - **Subjective**: Contains detailed HPI.
@@ -335,6 +334,11 @@ components:
             type: string
           nullable: true
           description: Special instructions for note generation. This field is optional.
+          example:
+            - "Use a professional and concise tone."
+            - "Include key details without unnecessary elaboration."
+            - "Ensure clarity for a general audience."
+            
         medicationList:
           type: string
           description: List of up to 50 medications (comma separated) to use as reference for fixing spelling errors. This field is optional.
