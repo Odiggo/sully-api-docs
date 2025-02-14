@@ -29,6 +29,25 @@ Endpoint:<br/>`wss://api.sully.ai/v1/audio/transcriptions/stream?account_id=1234
     The sample rate of your submitted audio.
 </ParamField>
 
+<ParamField query="encoding" type="string">
+      Specifies the encoding format of the audio being sent.
+      
+      <b>Important:</b> This parameter is <b>required</b> when transmitting raw, unstructured audio packets without headers. 
+      If the audio data is encapsulated within a container format, this parameter should be omitted.
+
+      <b>Supported formats:</b>
+      <ul>
+        <li><code>linear16</code>: 16-bit, little-endian PCM audio</li>
+        <li><code>flac</code>: Free Lossless Audio Codec (FLAC)</li>
+        <li><code>mulaw</code>: Mu-law encoded WAV</li>
+        <li><code>amr-nb</code>: Adaptive Multi-Rate, narrowband</li>
+        <li><code>amr-wb</code>: Adaptive Multi-Rate, wideband</li>
+        <li><code>opus</code>: Ogg Opus codec</li>
+        <li><code>speex</code>: Speex codec</li>
+        <li><code>g729</code>: G729 codec (usable with raw or containerized audio)</li>
+      </ul>
+</ParamField>
+
 <ParamField query="account_id" type="string">
     The account ID to use for authentication. Required if `X-ACCOUNT-ID` is not provided.
 </ParamField>
