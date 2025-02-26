@@ -109,15 +109,53 @@ The server will always respond with a message containing the following fields:
 
 ```json Response message
 {
-    "isFinal": false,
-    "text": "Hello, world"
+  "type": "transcript",
+  "audio_start": 0,
+  "audio_end": 3.2,
+  "duration": 3.2,
+  "text": "Hello, world",
+  "isFinal": false, 
+  "is_final": false,
+  "words": [
+    {"text": "Hello,", "start": 0.2, "end": 0.7},
+    {"text": "world", "start": 0.9, "end": 1.2}
+  ],
+  "timestamp": "2023-08-15T14:32:07.123Z"
 }
 ```
 
-<ResponseField name="isFinal" type="boolean" optional="true">
+<ResponseField name="type" type="string">
+  The type of response, will be "transcript" for transcription results.
+</ResponseField>
+
+<ResponseField name="audio_start" type="number">
+  Start time of the audio segment in seconds.
+</ResponseField>
+
+<ResponseField name="audio_end" type="number">
+  End time of the audio segment in seconds.
+</ResponseField>
+
+<ResponseField name="duration" type="number">
+  Duration of the audio segment in seconds.
+</ResponseField>
+
+<ResponseField name="text" type="string">
+  The processed text sequence.
+</ResponseField>
+
+<ResponseField name="isFinal" type="boolean" deprecated>
+  Indicates if the generation is complete. <b>Deprecated:</b> Use <code>is_final</code> instead.
+</ResponseField>
+
+<ResponseField name="is_final" type="boolean">
   Indicates if the generation is complete.
 </ResponseField>
 
-<ResponseField name="text" type="string" optional="true">
-  The processed text sequence.
+<ResponseField name="words" type="array">
+  Array of word objects with text content and timing information.
+</ResponseField>
+
+<ResponseField name="timestamp" type="string">
+  ISO-formatted timestamp when the response was generated.
 </ResponseField>
