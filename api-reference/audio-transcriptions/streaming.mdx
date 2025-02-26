@@ -117,8 +117,20 @@ The server will always respond with a message containing the following fields:
   "isFinal": false, 
   "is_final": false,
   "words": [
-    {"word": "Hello,", "start": 0.2, "end": 0.7},
-    {"word": "world", "start": 0.9, "end": 1.2}
+    {
+      "word": "Hello",
+      "start": 0.2,
+      "end": 0.7,
+      "confidence": 0.9856743,
+      "punctuated_word": "Hello,"
+    },
+    {
+      "word": "world",
+      "start": 0.9,
+      "end": 1.2,
+      "confidence": 0.9978341,
+      "punctuated_word": "world"
+    }
   ],
   "timestamp": "2023-08-15T14:32:07.123Z"
 }
@@ -153,7 +165,14 @@ The server will always respond with a message containing the following fields:
 </ResponseField>
 
 <ResponseField name="words" type="array">
-  Array of word objects with text content and timing information.
+  Array of word objects with text content and timing information:
+  <ul>
+    <li><code>word</code>: The raw word as recognized</li>
+    <li><code>start</code>: Start time of the word in seconds</li>
+    <li><code>end</code>: End time of the word in seconds</li>
+    <li><code>confidence</code>: Confidence score between 0-1 for the word recognition</li>
+    <li><code>punctuated_word</code>: The word with proper capitalization and punctuation</li>
+  </ul>
 </ResponseField>
 
 <ResponseField name="timestamp" type="string">
