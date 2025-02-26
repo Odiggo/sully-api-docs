@@ -64,6 +64,28 @@ The Speech-to-Text Websockets API is designed to generate text from partial audi
 
 The WebSocket API uses a bidirectional protocol that encodes all messages as JSON objects.
 
+## Connection Status Messages
+
+Upon successful connection, the server sends a status message:
+
+```json
+{
+  "status": "connected",
+}
+```
+
+When the connection closes:
+
+```json
+{
+  "status": "disconnected",
+}
+```
+
+<Note>
+  **Important:** Wait for the "status": "connected" message before sending audio data. This ensures the server is ready to process your stream.
+</Note>
+
 # Streaming input audio
 
 The client can send messages with audio input to the server. The messages can contain the following fields:
@@ -76,6 +98,10 @@ The client can send messages with audio input to the server. The messages can co
 <ParamField body="audio" type="string" required>
     A generated partial audio chunk encoded as a base64 string.
 </ParamField>
+
+<Note>
+  **Browser MediaRecorder Notice:** When using Chrome's MediaRecorder API, the first audio chunk contains critical header information. Always send this first chunk for proper audio processing. Failing to include header information may result in transcription errors or complete failure.
+</Note>
 
 ## Streaming output audio
 
