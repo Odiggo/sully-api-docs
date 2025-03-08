@@ -73,8 +73,11 @@
       ]
     },
     {
-      "group": "Objects",
-      "pages": ["api-reference/objects/soap-note"]
+      "group": "Schemas",
+      "pages": [
+        "api-reference/schemas/soap-note",
+        "api-reference/schemas/note-template"
+      ]
     }
   ],
   "footerSocials": {

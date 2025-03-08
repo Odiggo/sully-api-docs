@@ -230,7 +230,7 @@ components:
                   description: Markdown string of the note
                 json:
                   type: object
-                  description: JSON object of the note. The note style used will determine which fields are present. See the [SOAP Note](/api-reference/objects/soap-note) example.
+                  description: JSON object of the note. The note style used will determine which fields are present. See the [SOAP Note](/api-reference/schemas/soap-note) example.
 
             status:
               type: string
@@ -277,18 +277,30 @@ components:
             type:
               type: string
               description: >-
-                Determines the type of note to generate. Use `custom` to provide a custom 
-                template or `soap` for the default SOAP template.
+                Determines the type of note to generate.
+
+                - Use `custom` to provide a note style string
+
+                - Use `template` to provide a [Note Template](/api-reference/schemas/note-template) payload
+
+                - Use `soap` for the default SOAP template
               enum:
                 - soap
                 - custom
+                - template
               default: soap
               example: custom
             template:
-              type: string
+              oneOf:
+                - type: string
+                - type: object
               description: >-
                 Custom template to generate the note. This is applicable only when `type` 
-                is set to `custom`. This will typically be a note style created using the note style API.
+                is set to `custom` or `template`.
+
+                - When `type` is `custom`, this is a note style string
+
+                - When `type` is `template`, this is a [Note Template](/api-reference/schemas/note-template) payload
               example: >-
                 write a standard clinical SOAP note with the following sections:
                 - **Subjective**: Contains detailed HPI.
@@ -338,7 +350,7 @@ components:
             - "Use a professional and concise tone."
             - "Include key details without unnecessary elaboration."
             - "Ensure clarity for a general audience."
-            
+
         medicationList:
           type: string
           description: List of up to 50 medications (comma separated) to use as reference for fixing spelling errors. This field is optional.
