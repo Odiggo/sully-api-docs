@@ -197,7 +197,7 @@ There is a maximum heading nesting depth of **2**.
           Whether the label itself is bold.
         </ResponseField>
         <ResponseField name="detail_level" type="string">
-          Detail depth of text. One of: "high", "medium", "low".
+          Detail depth of text. One of: "exhaustive", "detailed", "standard", "brief", "minimal". Default: "standard".
         </ResponseField>
         <ResponseField name="emptyPlaceholder" type="string">
           Placeholder if the content is empty.
@@ -217,14 +217,20 @@ There is a maximum heading nesting depth of **2**.
         <ResponseField name="list_type" type="string">
           If this text is displayed as a list item. One of: "bullet", "numeric".
         </ResponseField>
+        <ResponseField name="max_paragraphs" type="number">
+          Maximum paragraphs (if auto-generating).
+        </ResponseField>
         <ResponseField name="max_sentences" type="number">
           Maximum sentences (if auto-generating).
+        </ResponseField>
+        <ResponseField name="min_paragraphs" type="number">
+          Minimum paragraphs (if auto-generating).
         </ResponseField>
         <ResponseField name="min_sentences" type="number">
           Minimum sentences (if auto-generating).
         </ResponseField>
         <ResponseField name="tone" type="string">
-          Tone of the text. One of: "formal", "casual", "technical", "simple".
+          Tone of the text. One of: "formal", "casual", "technical", "friendly", "instructional". Default: "formal".
         </ResponseField>
       </Expandable>
     </ResponseField>
