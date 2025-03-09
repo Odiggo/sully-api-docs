@@ -6,22 +6,22 @@ This document outlines the main structures for creating **Note Template** object
 
 ## NoteTemplate
 
-<ResponseField name="NoteTemplate" type="Object">
+<ParamField name="NoteTemplate" type="Object">
   <Expandable title="properties">
-    <ResponseField name="globalPrompt" type="string">
+    <ParamField name="globalPrompt" type="string">
       A global prompt applying to the entire template.
-    </ResponseField>
-    <ResponseField name="id" type="string" required>
+    </ParamField>
+    <ParamField name="id" type="string" required>
       A unique ID for the template.
-    </ResponseField>
-    <ResponseField name="sections" type="Array of Section objects" required>
+    </ParamField>
+    <ParamField name="sections" type="Array of Section objects" required>
       Ordered list of sections that make up the template.
-    </ResponseField>
-    <ResponseField name="title" type="string" required>
+    </ParamField>
+    <ParamField name="title" type="string" required>
       Title of the template.
-    </ResponseField>
+    </ParamField>
   </Expandable>
-</ResponseField>
+</ParamField>
 
 <CodeGroup>
 ```json Example
@@ -67,22 +67,22 @@ This document outlines the main structures for creating **Note Template** object
 
 ## Section
 
-<ResponseField name="Section" type="Discriminated Union">
+<ParamField name="Section" type="Discriminated Union">
   A discriminated union that represents any one of the major section types. The <code>type</code> field 
   determines which schema applies.
   
   <Expandable title="possible types">
-    <ResponseField name="HeadingSection" type="Object">
+    <ParamField name="HeadingSection" type="Object">
       When <code>type = "heading"</code>
-    </ResponseField>
-    <ResponseField name="ListSection" type="Object">
+    </ParamField>
+    <ParamField name="ListSection" type="Object">
       When <code>type = "list"</code>
-    </ResponseField>
-    <ResponseField name="TextSection" type="Object">
+    </ParamField>
+    <ParamField name="TextSection" type="Object">
       When <code>type = "text"</code>
-    </ResponseField>
+    </ParamField>
   </Expandable>
-</ResponseField>
+</ParamField>
 
 <CodeGroup>
 ```json Example
@@ -116,41 +116,41 @@ This document outlines the main structures for creating **Note Template** object
 **Important Note on Nesting**:  
 There is a maximum heading nesting depth of **2**.
 
-<ResponseField name="HeadingSection" type="Object">
+<ParamField name="HeadingSection" type="Object">
   <Expandable title="properties">
-    <ResponseField name="children" type="Array of Section objects" required>
+    <ParamField name="children" type="Array of Section objects" required>
       Nested sections under this heading.
-    </ResponseField>
-    <ResponseField name="id" type="string" required>
+    </ParamField>
+    <ParamField name="id" type="string" required>
       Unique identifier for this section.
-    </ResponseField>
-    <ResponseField name="properties" type="Object" required>
+    </ParamField>
+    <ParamField name="properties" type="Object" required>
       <Expandable title="properties">
-        <ResponseField name="bold" type="boolean">
+        <ParamField name="bold" type="boolean">
           Whether the content is bold.
-        </ResponseField>
-        <ResponseField name="hideIfEmpty" type="boolean">
+        </ParamField>
+        <ParamField name="hideIfEmpty" type="boolean">
           Hide this heading if empty.
-        </ResponseField>
-        <ResponseField name="italic" type="boolean">
+        </ParamField>
+        <ParamField name="italic" type="boolean">
           Whether the content is italic.
-        </ResponseField>
-        <ResponseField name="level" type="number" required>
+        </ParamField>
+        <ParamField name="level" type="number" required>
           Heading level (0 ≤ level ≤ 6).
-        </ResponseField>
-        <ResponseField name="text" type="string" required>
+        </ParamField>
+        <ParamField name="text" type="string" required>
           The heading text.
-        </ResponseField>
+        </ParamField>
       </Expandable>
-    </ResponseField>
-    <ResponseField name="result" type="string">
+    </ParamField>
+    <ParamField name="result" type="string">
       Resulting text if generated or stored.
-    </ResponseField>
-    <ResponseField name="type" type="string" required>
+    </ParamField>
+    <ParamField name="type" type="string" required>
       Must be set to "heading".
-    </ResponseField>
+    </ParamField>
   </Expandable>
-</ResponseField>
+</ParamField>
 
 <CodeGroup>
 ```json Example
@@ -164,8 +164,7 @@ There is a maximum heading nesting depth of **2**.
     "level": 1,
     "text": "Project Introduction"
   },
-  "children": [],
-  "result": "Introduction content goes here..."
+  "children": []
 }
 ```
 </CodeGroup>
@@ -174,74 +173,71 @@ There is a maximum heading nesting depth of **2**.
 
 ## TextSection
 
-<ResponseField name="TextSection" type="Object">
+<ParamField name="TextSection" type="Object">
   <Expandable title="properties">
-    <ResponseField name="id" type="string" required>
+    <ParamField name="id" type="string" required>
       Unique identifier for this section.
-    </ResponseField>
-    <ResponseField name="prompt" type="string" required>
+    </ParamField>
+    <ParamField name="prompt" type="string" required>
       A prompt or instruction for generating/filling text.
-    </ResponseField>
-    <ResponseField name="properties" type="Object" required>
+    </ParamField>
+    <ParamField name="properties" type="Object" required>
       <Expandable title="properties">
-        <ResponseField name="allow_bold" type="boolean">
-          Whether bold text is allowed in this content.
-        </ResponseField>
-        <ResponseField name="allow_italic" type="boolean">
-          Whether italic text is allowed in this content.
-        </ResponseField>
-        <ResponseField name="bold" type="boolean">
+        <ParamField name="bold" type="boolean">
           Whether the content is bold.
-        </ResponseField>
-        <ResponseField name="bold_label" type="boolean">
-          Whether the label itself is bold.
-        </ResponseField>
-        <ResponseField name="detail_level" type="string">
-          Detail depth of text. One of: "exhaustive", "detailed", "standard", "brief", "minimal". Default: "standard".
-        </ResponseField>
-        <ResponseField name="emptyPlaceholder" type="string">
-          Placeholder if the content is empty.
-        </ResponseField>
-        <ResponseField name="hideIfEmpty" type="boolean">
-          Hide this text if empty.
-        </ResponseField>
-        <ResponseField name="italic" type="boolean">
+        </ParamField>
+        <ParamField name="italic" type="boolean">
           Whether the content is italic.
-        </ResponseField>
-        <ResponseField name="italic_label" type="boolean">
-          Whether the label itself is italic.
-        </ResponseField>
-        <ResponseField name="label" type="string">
+        </ParamField>
+        <ParamField name="hideIfEmpty" type="boolean">
+          Hide this text if empty.
+        </ParamField>
+        <ParamField name="formatting_style" type="string" default="markdown">
+          Content formatting style. One of: "markdown", "plain".
+        </ParamField>
+        <ParamField name="detail_level" type="string" default="standard">
+          Detail depth of text. One of: "exhaustive", "detailed", "standard", "brief", "minimal".
+        </ParamField>
+        <ParamField name="tone" type="string" default="formal">
+          Tone of the text. One of: "formal", "casual", "technical", "friendly", "instructional".
+        </ParamField>
+        <ParamField name="emptyPlaceholder" type="string">
+          Placeholder if the content is empty.
+        </ParamField>
+        <ParamField name="label" type="string">
           A label or title for the text.
-        </ResponseField>
-        <ResponseField name="list_type" type="string">
+        </ParamField>
+        <ParamField name="bold_label" type="boolean">
+          Whether the label itself is bold.
+        </ParamField>
+        <ParamField name="italic_label" type="boolean">
+          Whether the label itself is italic.
+        </ParamField>
+        <ParamField name="list_type" type="string">
           If this text is displayed as a list item. One of: "bullet", "numeric".
-        </ResponseField>
-        <ResponseField name="max_paragraphs" type="number">
+        </ParamField>
+        <ParamField name="max_paragraphs" type="number">
           Maximum paragraphs (if auto-generating).
-        </ResponseField>
-        <ResponseField name="max_sentences" type="number">
+        </ParamField>
+        <ParamField name="max_sentences" type="number">
           Maximum sentences (if auto-generating).
-        </ResponseField>
-        <ResponseField name="min_paragraphs" type="number">
+        </ParamField>
+        <ParamField name="min_paragraphs" type="number">
           Minimum paragraphs (if auto-generating).
-        </ResponseField>
-        <ResponseField name="min_sentences" type="number">
+        </ParamField>
+        <ParamField name="min_sentences" type="number">
           Minimum sentences (if auto-generating).
-        </ResponseField>
-        <ResponseField name="tone" type="string">
-          Tone of the text. One of: "formal", "casual", "technical", "friendly", "instructional". Default: "formal".
-        </ResponseField>
+        </ParamField>
       </Expandable>
-    </ResponseField>
-    <ResponseField name="result" type="string">
+    </ParamField>
+    <ParamField name="result" type="string">
       Final or generated text.
-    </ResponseField>
-    <ResponseField name="type" type="string" required>
+    </ParamField>
+    <ParamField name="type" type="string" required>
       Must be set to "text".
-    </ResponseField>
+    </ParamField>
   </Expandable>
-</ResponseField>
+</ParamField>
 
 <CodeGroup>
 ```json Example
@@ -253,17 +249,16 @@ There is a maximum heading nesting depth of **2**.
     "bold": false,
     "italic": false,
     "hideIfEmpty": true,
-    "allow_bold": true,
-    "allow_italic": true,
-    "detail_level": "medium",
+    "formatting_style": "markdown",
+    "detail_level": "brief",
     "tone": "casual",
     "label": "Project Scope",
     "bold_label": false,
     "italic_label": false,
     "min_sentences": 2,
-    "max_sentences": 3
-  },
-  "result": "Our project aims to streamline operations..."
+    "max_sentences": 3,
+    "emptyPlaceholder": "No scope defined yet"
+  }
 }
 ```
 </CodeGroup>
@@ -272,59 +267,56 @@ There is a maximum heading nesting depth of **2**.
 
 ## ListSection
 
-<ResponseField name="ListSection" type="Object">
+<ParamField name="ListSection" type="Object">
   <Expandable title="properties">
-    <ResponseField name="id" type="string" required>
+    <ParamField name="id" type="string" required>
       Unique identifier for this section.
-    </ResponseField>
-    <ResponseField name="prompt" type="string" required>
+    </ParamField>
+    <ParamField name="prompt" type="string" required>
       A prompt or instruction for generating/filling the list.
-    </ResponseField>
-    <ResponseField name="properties" type="Object" required>
+    </ParamField>
+    <ParamField name="properties" type="Object" required>
       <Expandable title="properties">
-        <ResponseField name="allow_bold" type="boolean">
-          Whether bold text is allowed in list items.
-        </ResponseField>
-        <ResponseField name="allow_italic" type="boolean">
-          Whether italic text is allowed in list items.
-        </ResponseField>
-        <ResponseField name="bold" type="boolean">
+        <ParamField name="bold" type="boolean">
           Whether the content is bold.
-        </ResponseField>
-        <ResponseField name="detail_level" type="string">
-          Detail depth for list items. One of: "high", "medium", "low".
-        </ResponseField>
-        <ResponseField name="emptyPlaceholder" type="string">
-          Placeholder if the list is empty.
-        </ResponseField>
-        <ResponseField name="hideIfEmpty" type="boolean">
-          Hide this list if empty.
-        </ResponseField>
-        <ResponseField name="italic" type="boolean">
+        </ParamField>
+        <ParamField name="italic" type="boolean">
           Whether the content is italic.
-        </ResponseField>
-        <ResponseField name="list_type" type="string" required>
+        </ParamField>
+        <ParamField name="hideIfEmpty" type="boolean">
+          Hide this list if empty.
+        </ParamField>
+        <ParamField name="formatting_style" type="string" default="markdown">
+          Content formatting style. One of: "markdown", "plain".
+        </ParamField>
+        <ParamField name="detail_level" type="string" default="standard">
+          Detail depth for list items. One of: "exhaustive", "detailed", "standard", "brief", "minimal".
+        </ParamField>
+        <ParamField name="tone" type="string" default="formal">
+          Tone of the list content. One of: "formal", "casual", "technical", "friendly", "instructional".
+        </ParamField>
+        <ParamField name="emptyPlaceholder" type="string">
+          Placeholder if the list is empty.
+        </ParamField>
+        <ParamField name="list_type" type="string" required>
           The format of the list. One of: "bullet", "numeric".
-        </ResponseField>
-        <ResponseField name="max_items" type="number">
+        </ParamField>
+        <ParamField name="max_items" type="number">
           Maximum number of items.
-        </ResponseField>
-        <ResponseField name="min_items" type="number">
+        </ParamField>
+        <ParamField name="min_items" type="number">
           Minimum number of items.
-        </ResponseField>
-        <ResponseField name="tone" type="string">
-          Tone of the list content. One of: "formal", "casual", "technical", "simple".
-        </ResponseField>
+        </ParamField>
       </Expandable>
-    </ResponseField>
-    <ResponseField name="result" type="Array of strings">
+    </ParamField>
+    <ParamField name="result" type="Array of strings">
       The final or generated list items.
-    </ResponseField>
-    <ResponseField name="type" type="string" required>
+    </ParamField>
+    <ParamField name="type" type="string" required>
       Must be set to "list".
-    </ResponseField>
+    </ParamField>
   </Expandable>
-</ResponseField>
+</ParamField>
 
 <CodeGroup>
 ```json Example
@@ -336,15 +328,14 @@ There is a maximum heading nesting depth of **2**.
     "bold": false,
     "italic": false,
     "hideIfEmpty": false,
-    "allow_bold": false,
-    "allow_italic": false,
-    "detail_level": "low",
-    "tone": "simple",
+    "formatting_style": "markdown",
+    "detail_level": "minimal",
+    "tone": "technical",
     "list_type": "bullet",
     "min_items": 1,
-    "max_items": 5
-  },
-  "result": ["Deliverable A", "Deliverable B"]
+    "max_items": 5,
+    "emptyPlaceholder": "No deliverables defined"
+  }
 }
 ```
 </CodeGroup>

@@ -279,28 +279,28 @@ components:
               description: >-
                 Determines the type of note to generate.
 
-                - Use `custom` to provide a note style string
+                - Use `note_style` to provide a note style string
 
-                - Use `template` to provide a [Note Template](/api-reference/schemas/note-template) payload
+                - Use `note_template` to provide a [Note Template](/api-reference/schemas/note-template) payload
 
                 - Use `soap` for the default SOAP template
               enum:
                 - soap
-                - custom
-                - template
+                - note_style
+                - note_template
               default: soap
-              example: custom
+              example: note_style
             template:
               oneOf:
                 - type: string
                 - type: object
               description: >-
                 Custom template to generate the note. This is applicable only when `type` 
-                is set to `custom` or `template`.
+                is set to `note_style` or `note_template`.
 
-                - When `type` is `custom`, this is a note style string
+                - When `type` is `note_style`, this is a note style string
 
-                - When `type` is `template`, this is a [Note Template](/api-reference/schemas/note-template) payload
+                - When `type` is `note_template`, this is a [Note Template](/api-reference/schemas/note-template) payload
               example: >-
                 write a standard clinical SOAP note with the following sections:
                 - **Subjective**: Contains detailed HPI.
