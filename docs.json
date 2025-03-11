@@ -12,13 +12,10 @@
     "tabs": [
       {
         "tab": "API Reference",
-        "openapi": "https://raw.githubusercontent.com/sullyai/sullyai-openapi/refs/heads/main/openapi.yaml",
         "groups": [
           {
             "group": "Getting Started",
-            "pages": [
-              "api-reference/getting-started/authentication"
-            ]
+            "pages": ["api-reference/getting-started/authentication"]
           },
           {
             "group": "Notes",
@@ -30,9 +27,7 @@
           },
           {
             "group": "Note Styles",
-            "pages": [
-              "api-reference/note-styles/create"
-            ]
+            "pages": ["api-reference/note-styles/create"]
           },
           {
             "group": "Audio Transcriptions",
