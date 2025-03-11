@@ -88,5 +88,8 @@
       "x": "https://x.com/sully_the_ai",
       "linkedin": "https://www.linkedin.com/company/sully-ai"
     }
+  },
+  "api": {
+    "openapi": "https://raw.githubusercontent.com/sullyai/sullyai-openapi/refs/heads/main/openapi.yaml"
   }
 }
