@@ -11,14 +11,20 @@
   "navigation": {
     "tabs": [
       {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Guides",
+            "pages": ["documentation/overview", "documentation/notes"]
+          }
+        ]
+      },
+      {
         "tab": "API Reference",
         "groups": [
           {
             "group": "Getting Started",
-            "pages": [
-              "api-reference/getting-started/authentication",
-              "api-reference/getting-started/overview"
-            ]
+            "pages": ["api-reference/getting-started/authentication"]
           },
           {
             "group": "Notes",
