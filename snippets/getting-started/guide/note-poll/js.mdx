@@ -1,0 +1,20 @@
+```javascript JavaScript
+// Poll until note is complete
+let response;
+
+do {
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  response = await fetch(`https://api.sully.ai/v1/notes/${noteId}`, {
+    headers: { 
+      'X-Api-Key': 'your-api-key',
+      'X-Account-Id': 'your-account-id'
+    }
+  });
+} while (response.data.status === 'STATUS_PROCESSING');
+
+if (response.data.status === 'STATUS_ERROR') {
+  throw new Error('Note generation failed');
+}
+
+const note = response.data.payload;
+```

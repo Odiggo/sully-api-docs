@@ -1,0 +1,28 @@
+```javascript JavaScript
+app.post('/webhook', (req, res) => {
+  // ... webhook signature handling
+
+  const event = JSON.parse(req.body);
+
+  switch(event.type) {
+    // Receive a successfully generated note
+    case 'note_generation.succeeded':
+      const { id: noteId, payload } = event.data;
+      break;
+    // Handle a note generation error
+    case 'note_generation.failed':
+      const { id: noteId, error } = event.data;
+      break;
+    // Receive a successfully generated transcription
+    case 'audio_transcription.succeeded':
+      const { transcriptionId, payload: { transcription } } = event.data;
+      break;
+    // Handle an audio transcription error
+    case 'audio_transcription.failed':
+      const { transcriptionId, error } = event.data;
+      break;
+  }
+
+  res.status(200).send('Webhook received');
+});
+```

@@ -11,6 +11,15 @@
   "navigation": {
     "tabs": [
       {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Guides",
+            "pages": ["documentation/overview", "documentation/notes"]
+          }
+        ]
+      },
+      {
         "tab": "API Reference",
         "groups": [
           {

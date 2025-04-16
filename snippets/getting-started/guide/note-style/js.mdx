@@ -1,0 +1,31 @@
+```javascript JavaScript
+// 1. Create a custom note style
+const styleResponse = await fetch('https://api.sully.ai/v1/note-styles', {
+  method: 'POST',
+  headers: {
+    'X-Api-Key': 'your-api-key',
+    'X-Account-Id': 'your-account-id',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    sampleNote: "CC: Headache\nHPI: Patient reports headache for 3 days...",
+    instructions: ["Use bullet points for symptoms", "Include vital signs"]
+  })
+});
+const { data: { template } } = await styleResponse.json();
+
+// 2. Use the style for creating notes
+const noteResponse = await fetch('https://api.sully.ai/v1/notes', {
+  method: 'POST',
+  headers: {
+    'X-Api-Key': 'your-api-key',
+    'X-Account-Id': 'your-account-id',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    transcript: 'Patient reports headache for 3 days...',
+    noteType: { type: 'note_style', template }
+  })
+});
+const { data: { noteId } } = await noteResponse.json();
+```
