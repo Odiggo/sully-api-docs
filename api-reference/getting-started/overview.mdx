@@ -1,0 +1,121 @@
+---
+title: 'Overview'
+description: 'Create clinical notes from real patient conversations using Sully.ai'
+---
+
+import JSUpload from '/snippets/getting-started/guide/upload/js.mdx'
+
+import JSUploadPoll from '/snippets/getting-started/guide/upload-poll/js.mdx'
+
+import JSStream from '/snippets/getting-started/guide/stream/js.mdx'
+
+import JSSoap from '/snippets/getting-started/guide/soap/js.mdx'
+
+import JSNoteStyle from '/snippets/getting-started/guide/note-style/js.mdx'
+
+import JSTemplates from '/snippets/getting-started/guide/templates/js.mdx'
+
+import JSNotePoll from '/snippets/getting-started/guide/note-poll/js.mdx'
+
+import JSWebhook from '/snippets/getting-started/guide/webhook/js.mdx'
+
+import JSLanguageSupport from '/snippets/getting-started/guide/language-support/js.mdx'
+
+## Creating Notes with Sully.ai 
+
+The Sully.ai API allows you to turn audio conversations into clinical notes, saving you time and improving your documentation quality. Notes are generated using the API in 3 steps:
+
+1. [Transcribe](#1-transcribe-audio) the conversation audio by uploading a file or streaming audio in real-time.
+2. [Generate](#2-generate-a-note) a note using the transcription.
+3. [Retrieve](#3-retrieve-the-note) the completed note (via webhooks or polling).
+
+## 1. Transcribe Audio
+
+### Upload a File
+
+You can transcribe audio files using the [Create Audio Transcription API](/api-reference/audio-transcriptions/create). First, submit your file for transcription:
+
+<CodeGroup>
+  <JSUpload />
+</CodeGroup>
+
+Then wait for completion either via webhooks or polling:
+
+<CodeGroup>
+  <JSUploadPoll />
+</CodeGroup>
+
+Supported file types include MP3, WAV, M4A, and OGG (max 50MB).
+
+### Stream in Real-time
+
+If you are looking to stream audio for transcription during visits, you will first need to [request a token from the API](http://localhost:3001/api-reference/audio-transcriptions/stream-token), then open a WebSocket so that you can pass audio and receive transcriptions in real-time.
+
+<CodeGroup>
+  <JSStream />
+</CodeGroup>
+
+## 2. Generate A Note
+
+### SOAP Notes
+
+You can generate SOAP notes immediately using Sully's pre-configured note type.
+
+<CodeGroup>
+  <JSSoap />
+</CodeGroup>
+
+### Custom Note Styles
+
+If Sully's SOAP notes aren't what you're looking for, you can create your own [Note Style](/api-reference/note-styles/create) by providing a sample note for Sully to use as a reference.
+
+<CodeGroup>
+  <JSNoteStyle />
+</CodeGroup>
+
+### Structured Note Templates
+
+If you need a precise note structure that Note Styles aren't providing, you can instead specify a [Note Template](/api-reference/schemas/note-template). This will allow you to control the fine details of your note formatting such as lists, headers, and section lengths.
+
+<CodeGroup>
+  <JSTemplates />
+</CodeGroup>
+
+## 3. Retrieve The Note
+
+Notes typically only take a few seconds to generate. You can retrieve your completed note either by polling the notes API or setting up a webhook so that your application may be notified whenever a note or transcription has been completed.
+
+### Poll for Notes
+
+<CodeGroup>
+  <JSNotePoll />
+</CodeGroup>
+
+### Webhooks
+
+For full webhook setup instructions, follow the [Webhooks guide](/api-reference/events/webhooks). Once set up, your webhook handler will receive [events](/api-reference/events/overview) related to audio transcription and note generation.
+
+<CodeGroup>
+  <JSWebhook />
+</CodeGroup>
+
+## Language Support
+
+You can specify a BCP47 language tag both when uploading and streaming audio for transcription. Audio which is not in the specified language will be ignored. Or, you can also specify the `multi` tag as the language for multi-lingual conversations.
+
+<CodeGroup>
+  <JSLanguageSupport />
+</CodeGroup>
+
+## Specify More Context
+
+If you have additional context programmatically available, you can provide it to Sully's note creation API so that it can be incorporated into your notes.
+
+- **date:** The date of the patient visit.
+- **patientInfo:** High-level patient descriptors including name, date of birth, and gender.
+- **medicationList:** A list of known patient medications.
+- **previousNote:** A previous note needed as context for this note (e.g. if it is a follow-up).
+- **instructions:** Additional instructions for how you'd like the note to be generated.
+- **context:** Any additional context you'd like to provide.
+
+See the [Create Note API](/api-reference/notes/create) for the up-to-date list of options.

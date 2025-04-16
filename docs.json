@@ -15,7 +15,10 @@
         "groups": [
           {
             "group": "Getting Started",
-            "pages": ["api-reference/getting-started/authentication"]
+            "pages": [
+              "api-reference/getting-started/authentication",
+              "api-reference/getting-started/overview"
+            ]
           },
           {
             "group": "Notes",

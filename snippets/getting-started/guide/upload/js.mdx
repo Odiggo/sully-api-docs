@@ -1,0 +1,19 @@
+```javascript JavaScript
+// Transcribe an audio file
+const body = new FormData();
+body.append('audio', audioBuffer, {
+  filename: 'audio.mp3',
+  contentType: 'audio/mpeg',
+});
+
+const response = await fetch('https://api.sully.ai/v1/audio/transcriptions', {
+  method: 'POST',
+  headers: { 
+    'X-Api-Key': 'your-api-key',
+    'X-Account-Id': 'your-account-id'
+  },
+  body
+});
+
+const { data: { transcriptionId } } = await response.json();
+```

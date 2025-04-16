@@ -1,0 +1,17 @@
+```javascript JavaScript
+// Create a SOAP note from a transcription
+const response = await fetch('https://api.sully.ai/v1/notes', {
+  method: 'POST',
+  headers: {
+    'X-Api-Key': 'your-api-key',
+    'X-Account-Id': 'your-account-id',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    transcript: "I've been feeling really tired lately. How long has this been going on? About two weeks. Let's run some blood tests to check your iron and thyroid levels.",
+    noteType: { type: 'soap' }
+  })
+});
+
+const { data: { noteId } } = await response.json();
+```
