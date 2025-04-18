@@ -49,9 +49,21 @@ Our Audio Transcription API supports a wide range of languages. This document pr
 
 ## Multilingual Support
 
-Our API also supports multilingual transcription, which automatically detects and transcribes content in multiple languages within the same audio file.
+Our API also supports multilingual transcription, which automatically detects and transcribes content in multiple languages within the same audio file. Multilingual transcription will automtically be used for the following supported languages:
 
-To use multilingual transcription, specify the `multi` language tag in your request:
+| Language | Language Tags |
+| -------- | -------------- |
+| Dutch | nl |
+| French | fr |
+| German | de |
+| Hindi | hi |
+| Italian | it |
+| Japanese | ja |
+| Portuguese | pt |
+| Russian | ru |
+| Spanish | es |
+
+You may also specify the `multi` language tag in your request rather than one of the languages listed above:
 
 ```
 wss://api.sully.ai/v1/audio/transcriptions/stream?language=multi&sample_rate=16000
