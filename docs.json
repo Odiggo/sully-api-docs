@@ -45,7 +45,8 @@
               "api-reference/audio-transcriptions/create",
               "api-reference/audio-transcriptions/delete",
               "api-reference/audio-transcriptions/streaming",
-              "api-reference/audio-transcriptions/stream-token"
+              "api-reference/audio-transcriptions/stream-token",
+              "api-reference/audio-transcriptions/languages"
             ]
           },
           {

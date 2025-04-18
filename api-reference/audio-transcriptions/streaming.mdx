@@ -6,7 +6,7 @@ icon: "comments"
 This API provides streaming speech-to-text transcriptions using WebSockets.
 
 <Note>
-Endpoint:<br/>`wss://api.sully.ai/v1/audio/transcriptions/stream?account_id=1234567890&api_token=1234567890&sample_rate=16000`
+Endpoint:<br/>`wss://api.sully.ai/v1/audio/transcriptions/stream?account_id=1234567890&api_token=1234567890&sample_rate=16000&language=en`
 </Note>
 
 ## Headers
@@ -24,6 +24,10 @@ Endpoint:<br/>`wss://api.sully.ai/v1/audio/transcriptions/stream?account_id=1234
 </ParamField>
 
 ## Query parameters
+
+<ParamField query="language" type="string" default="en">
+    The language of your submitted audio. See our [Supported Languages](/api-reference/audio-transcriptions/languages) documentation for a complete list of language options.
+</ParamField>
 
 <ParamField query="sample_rate" type="string">
     The sample rate of your submitted audio.
