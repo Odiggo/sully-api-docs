@@ -49,6 +49,10 @@
             ]
           },
           {
+            "group": "Schema",
+            "pages": ["api-reference/schema/from-text/create"]
+          },
+          {
             "group": "Events",
             "pages": [
               "api-reference/events/overview",
