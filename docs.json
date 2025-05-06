@@ -94,7 +94,7 @@
     "primary": {
       "type": "button",
       "label": "Dashboard",
-      "href": "https://console.sully.ai"
+      "href": "https://dashboard.api.sully.ai"
     }
   },
   "footer": {
