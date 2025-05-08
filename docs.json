@@ -50,6 +50,14 @@
             ]
           },
           {
+            "group": "Codings",
+            "pages": [
+              "api-reference/codings/get",
+              "api-reference/codings/create",
+              "api-reference/codings/delete"
+            ]
+          },
+          {
             "group": "Schema",
             "pages": ["api-reference/schema/from-text/create"]
           },
