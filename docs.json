@@ -58,8 +58,12 @@
             ]
           },
           {
-            "group": "Schema",
-            "pages": ["api-reference/schema/from-text/create"]
+            "group": "Macros",
+            "pages": ["api-reference/macros/detect"]
+          },
+          {
+            "group": "Utils",
+            "pages": ["api-reference/utils/text-to-json"]
           },
           {
             "group": "Events",
