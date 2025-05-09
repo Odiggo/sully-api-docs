@@ -58,6 +58,12 @@
             ]
           },
           {
+            "group": "Macros",
+            "pages": [
+              "api-reference/macros/detect"
+            ]
+          },
+          {
             "group": "Schema",
             "pages": ["api-reference/schema/from-text/create"]
           },
