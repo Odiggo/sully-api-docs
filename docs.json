@@ -116,6 +116,6 @@
     }
   },
   "api": {
-    "openapi": "https://raw.githubusercontent.com/sullyai/sullyai-openapi/refs/heads/main/openapi.yaml"
+    "openapi": "https://raw.githubusercontent.com/Odiggo/sullyai-openapi/refs/heads/main/openapi.yaml"
   }
 }
