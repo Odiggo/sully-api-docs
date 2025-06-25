@@ -107,23 +107,133 @@ This is particularly useful for listening to asynchronous events such as generat
 
     <Expandable title="properties" defaultOpen>
         <ResponseField name="data" type="object">
-            <Expandable title="properties">
-                <ResponseField name="id" type="string">
-                    The id of the note.
-                </ResponseField>
-                <ResponseField name="status" type="string">
-                    The status of the note generation.
-                </ResponseField>
-                <ResponseField name="timestamp" type="object">
-                    <Expandable title="properties" defaultOpen>
-                        <ResponseField name="start" type="number">
-                            The start time of the note generation.
-                        </ResponseField>
-                        <ResponseField name="complete" type="number">
-                            The completion time of the note generation.
-                        </ResponseField>
-                    </Expandable>
-                </ResponseField>
+        <Expandable title="properties">
+            <ResponseField name="id" type="string">
+                The id of the note.
+            </ResponseField>
+            <ResponseField name="status" type="string">
+                The status of the note generation.
+            </ResponseField>
+            <ResponseField name="timestamp" type="object">
+                <Expandable title="properties" defaultOpen>
+                    <ResponseField name="start" type="number">
+                        The start time of the note generation.
+                    </ResponseField>
+                    <ResponseField name="complete" type="number">
+                        The completion time of the note generation.
+                    </ResponseField>
+                </Expandable>
+            </ResponseField>
+            </Expandable>
+        </ResponseField>
+    </Expandable>
+</ResponseField>
+
+<ResponseField name="coding.succeeded">
+    `data` is a coding result
+
+    Occurs whenever a coding operation succeeds.
+    <Expandable title="properties" defaultOpen>
+        <ResponseField name="data" type="object">
+        <Expandable title="properties">
+            <ResponseField name="id" type="string">
+                The id of the coding operation.
+            </ResponseField>
+            <ResponseField name="status" type="string">
+                The status of the coding operation.
+            </ResponseField>
+            <ResponseField name="created_at" type="string">
+                ISO 8601 timestamp of when the coding operation was created.
+            </ResponseField>
+            <ResponseField name="updated_at" type="string">
+                ISO 8601 timestamp of when the coding operation was last updated.
+            </ResponseField>
+            <ResponseField name="result" type="object">
+                <Expandable title="properties" defaultOpen>
+                    <ResponseField name="diagnoses" type="array">
+                        Array of diagnosed conditions with ICD-10-CM and SNOMED CT codes.
+                        <Expandable title="diagnosis object">
+                            <ResponseField name="id" type="string">
+                                Unique identifier for the diagnosis.
+                            </ResponseField>
+                            <ResponseField name="code" type="object">
+                                <Expandable title="properties">
+                                    <ResponseField name="coding" type="array">
+                                        Array of coding systems (ICD-10-CM, SNOMED CT).
+                                    </ResponseField>
+                                    <ResponseField name="text" type="string">
+                                        Human-readable description of the diagnosis.
+                                    </ResponseField>
+                                </Expandable>
+                            </ResponseField>
+                            <ResponseField name="text_span" type="object">
+                                <Expandable title="properties">
+                                    <ResponseField name="start_char" type="number">
+                                        Start character position in the source text.
+                                    </ResponseField>
+                                    <ResponseField name="end_char" type="number">
+                                        End character position in the source text.
+                                    </ResponseField>
+                                    <ResponseField name="text" type="string">
+                                        The actual text that was coded.
+                                    </ResponseField>
+                                </Expandable>
+                            </ResponseField>
+                        </Expandable>
+                    </ResponseField>
+                    <ResponseField name="procedures" type="array">
+                        Array of medical procedures with CPT codes.
+                        <Expandable title="procedure object">
+                            <ResponseField name="id" type="string">
+                                Unique identifier for the procedure.
+                            </ResponseField>
+                            <ResponseField name="code" type="object">
+                                <Expandable title="properties">
+                                    <ResponseField name="coding" type="array">
+                                        Array of coding systems (CPT).
+                                    </ResponseField>
+                                    <ResponseField name="text" type="string">
+                                        Human-readable description of the procedure.
+                                    </ResponseField>
+                                </Expandable>
+                            </ResponseField>
+                            <ResponseField name="text_span" type="object">
+                                <Expandable title="properties">
+                                    <ResponseField name="start_char" type="number">
+                                        Start character position in the source text.
+                                    </ResponseField>
+                                    <ResponseField name="end_char" type="number">
+                                        End character position in the source text.
+                                    </ResponseField>
+                                    <ResponseField name="text" type="string">
+                                        The actual text that was coded.
+                                    </ResponseField>
+                                </Expandable>
+                            </ResponseField>
+                        </Expandable>
+                    </ResponseField>
+                </Expandable>
+            </ResponseField>
+            </Expandable>
+        </ResponseField>
+    </Expandable>
+</ResponseField>
+
+<ResponseField name="coding.failed">
+    Occurs whenever a coding operation fails.
+
+    <Expandable title="properties" defaultOpen>
+        <ResponseField name="data" type="object">
+        <Expandable title="properties">
+            <ResponseField name="id" type="string">
+                The id of the coding operation.
+            </ResponseField>
+            <ResponseField name="status" type="string">
+                The status of the coding operation (will be "failed").
+            </ResponseField>
+            <ResponseField name="error" type="string">
+                The error message describing why the coding operation failed.
+            </ResponseField>
             </Expandable>
         </ResponseField>
     </Expandable>
