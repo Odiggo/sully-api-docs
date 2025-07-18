@@ -9,88 +9,175 @@
   },
   "favicon": "/favicon.png",
   "navigation": {
-    "tabs": [
+    "versions": [
       {
-        "tab": "Documentation",
-        "groups": [
+        "version": "v1",
+        "tabs": [
           {
-            "group": "Guides",
-            "pages": ["documentation/overview", "documentation/notes"]
+            "tab": "Documentation",
+            "groups": [
+              {
+                "group": "Guides",
+                "pages": ["documentation/overview", "documentation/notes"]
+              }
+            ]
+          },
+          {
+            "tab": "API Reference",
+            "groups": [
+              {
+                "group": "Getting Started",
+                "pages": ["api-reference/getting-started/authentication"]
+              },
+              {
+                "group": "Notes",
+                "pages": [
+                  "api-reference/notes/get",
+                  "api-reference/notes/create",
+                  "api-reference/notes/delete"
+                ]
+              },
+              {
+                "group": "Note Styles",
+                "pages": ["api-reference/note-styles/create"]
+              },
+              {
+                "group": "Audio Transcriptions",
+                "pages": [
+                  "api-reference/audio-transcriptions/get",
+                  "api-reference/audio-transcriptions/create",
+                  "api-reference/audio-transcriptions/delete",
+                  "api-reference/audio-transcriptions/streaming",
+                  "api-reference/audio-transcriptions/stream-token",
+                  "api-reference/audio-transcriptions/languages"
+                ]
+              },
+              {
+                "group": "Codings",
+                "pages": [
+                  "api-reference/codings/get",
+                  "api-reference/codings/create",
+                  "api-reference/codings/delete"
+                ]
+              },
+              {
+                "group": "Macros",
+                "pages": ["api-reference/macros/detect"]
+              },
+              {
+                "group": "Utils",
+                "pages": ["api-reference/utils/text-to-json"]
+              },
+              {
+                "group": "Events",
+                "pages": [
+                  "api-reference/events/overview",
+                  "api-reference/events/webhooks"
+                ]
+              },
+              {
+                "group": "Schemas",
+                "pages": [
+                  "api-reference/schemas/soap-note",
+                  "api-reference/schemas/note-template"
+                ]
+              }
+            ]
           }
-        ]
+        ],
+        "global": {
+          "anchors": [
+            {
+              "anchor": "Blog",
+              "href": "https://www.sully.ai/blog",
+              "icon": "newspaper"
+            }
+          ]
+        }
       },
       {
-        "tab": "API Reference",
-        "groups": [
+        "version": "v2",
+        "tabs": [
           {
-            "group": "Getting Started",
-            "pages": ["api-reference/getting-started/authentication"]
-          },
-          {
-            "group": "Notes",
-            "pages": [
-              "api-reference/notes/get",
-              "api-reference/notes/create",
-              "api-reference/notes/delete"
+            "tab": "Documentation",
+            "groups": [
+              {
+                "group": "Guides",
+                "pages": ["documentation/overview", "documentation/notes"]
+              }
             ]
           },
           {
-            "group": "Note Styles",
-            "pages": ["api-reference/note-styles/create"]
-          },
-          {
-            "group": "Audio Transcriptions",
-            "pages": [
-              "api-reference/audio-transcriptions/get",
-              "api-reference/audio-transcriptions/create",
-              "api-reference/audio-transcriptions/delete",
-              "api-reference/audio-transcriptions/streaming",
-              "api-reference/audio-transcriptions/stream-token",
-              "api-reference/audio-transcriptions/languages"
-            ]
-          },
-          {
-            "group": "Codings",
-            "pages": [
-              "api-reference/codings/get",
-              "api-reference/codings/create",
-              "api-reference/codings/delete"
-            ]
-          },
-          {
-            "group": "Macros",
-            "pages": ["api-reference/macros/detect"]
-          },
-          {
-            "group": "Utils",
-            "pages": ["api-reference/utils/text-to-json"]
-          },
-          {
-            "group": "Events",
-            "pages": [
-              "api-reference/events/overview",
-              "api-reference/events/webhooks"
-            ]
-          },
-          {
-            "group": "Schemas",
-            "pages": [
-              "api-reference/schemas/soap-note",
-              "api-reference/schemas/note-template"
+            "tab": "API Reference",
+            "groups": [
+              {
+                "group": "Getting Started",
+                "pages": ["api-reference/getting-started/authentication"]
+              },
+              {
+                "group": "Notes",
+                "pages": [
+                  "api-reference/notes/get",
+                  "api-reference/notes/create",
+                  "api-reference/notes/delete"
+                ]
+              },
+              {
+                "group": "Note Styles",
+                "pages": ["api-reference/note-styles/create"]
+              },
+              {
+                "group": "Audio Transcriptions",
+                "pages": [
+                  "api-reference-v2/audio-transcriptions/get",
+                  "api-reference-v2/audio-transcriptions/create",
+                  "api-reference-v2/audio-transcriptions/delete"
+                ]
+              },
+              {
+                "group": "Codings",
+                "pages": [
+                  "api-reference/codings/get",
+                  "api-reference/codings/create",
+                  "api-reference/codings/delete"
+                ]
+              },
+              {
+                "group": "Macros",
+                "pages": ["api-reference/macros/detect"]
+              },
+              {
+                "group": "Utils",
+                "pages": ["api-reference/utils/text-to-json"]
+              },
+              {
+                "group": "Events",
+                "pages": [
+                  "api-reference/events/overview",
+                  "api-reference/events/webhooks"
+                ]
+              },
+              {
+                "group": "Schemas",
+                "pages": [
+                  "api-reference/schemas/soap-note",
+                  "api-reference/schemas/note-template"
+                ]
+              }
             ]
           }
-        ]
-      }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Blog",
-          "href": "https://www.sully.ai/blog",
-          "icon": "newspaper"
+        ],
+        "global": {
+          "anchors": [
+            {
+              "anchor": "Blog",
+              "href": "https://www.sully.ai/blog",
+              "icon": "newspaper"
+            }
+          ]
         }
-      ]
-    }
+      }
+    ]
   },
   "logo": {
     "light": "/logo/light.svg",
