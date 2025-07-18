@@ -131,7 +131,10 @@
                 "pages": [
                   "api-reference-v2/audio-transcriptions/get",
                   "api-reference-v2/audio-transcriptions/create",
-                  "api-reference-v2/audio-transcriptions/delete"
+                  "api-reference-v2/audio-transcriptions/delete",
+                  "api-reference/audio-transcriptions/streaming",
+                  "api-reference/audio-transcriptions/stream-token",
+                  "api-reference/audio-transcriptions/languages"
                 ]
               },
               {
