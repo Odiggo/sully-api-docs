@@ -11,7 +11,7 @@
   "navigation": {
     "versions": [
       {
-        "version": "v1",
+        "version": "v2",
         "tabs": [
           {
             "tab": "Documentation",
@@ -44,9 +44,9 @@
               {
                 "group": "Audio Transcriptions",
                 "pages": [
-                  "api-reference/audio-transcriptions/get",
-                  "api-reference/audio-transcriptions/create",
-                  "api-reference/audio-transcriptions/delete",
+                  "api-reference-v2/audio-transcriptions/get",
+                  "api-reference-v2/audio-transcriptions/create",
+                  "api-reference-v2/audio-transcriptions/delete",
                   "api-reference/audio-transcriptions/streaming",
                   "api-reference/audio-transcriptions/stream-token",
                   "api-reference/audio-transcriptions/languages"
@@ -96,7 +96,7 @@
         }
       },
       {
-        "version": "v2",
+        "version": "v1",
         "tabs": [
           {
             "tab": "Documentation",
@@ -129,9 +129,9 @@
               {
                 "group": "Audio Transcriptions",
                 "pages": [
-                  "api-reference-v2/audio-transcriptions/get",
-                  "api-reference-v2/audio-transcriptions/create",
-                  "api-reference-v2/audio-transcriptions/delete",
+                  "api-reference/audio-transcriptions/get",
+                  "api-reference/audio-transcriptions/create",
+                  "api-reference/audio-transcriptions/delete",
                   "api-reference/audio-transcriptions/streaming",
                   "api-reference/audio-transcriptions/stream-token",
                   "api-reference/audio-transcriptions/languages"
