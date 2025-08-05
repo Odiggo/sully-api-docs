@@ -1,0 +1,225 @@
+---
+title: "Delete Note Template"
+api: "DELETE /alpha/note-templates/{id}"
+description: "Delete a note template generation job by its unique identifier."
+---
+
+## Overview
+
+Permanently delete a note template generation job and all associated data. This action cannot be undone.
+
+<Warning>
+  **This action is irreversible**. Once a template generation job is deleted, it cannot be recovered. Make sure you have saved any important results before deletion.
+</Warning>
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  The unique identifier of the note template generation job to delete
+</ParamField>
+
+## Response
+
+This endpoint returns no content on successful deletion.
+
+<RequestExample>
+
+```bash cURL
+curl -X DELETE "https://api.sully.ai/alpha/note-templates/template_abc123def456" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.sully.ai/alpha/note-templates/template_abc123def456', {
+  method: 'DELETE',
+  headers: {
+    'Authorization': 'Bearer YOUR_API_KEY'
+  }
+});
+
+if (response.ok) {
+  console.log('Note template job deleted successfully');
+} else {
+  console.error('Failed to delete note template job');
+}
+```
+
+```python Python
+import requests
+
+url = "https://api.sully.ai/alpha/note-templates/template_abc123def456"
+headers = {
+    "Authorization": "Bearer YOUR_API_KEY"
+}
+
+response = requests.delete(url, headers=headers)
+
+if response.status_code == 204:
+    print("Note template job deleted successfully")
+else:
+    print(f"Failed to delete note template job: {response.status_code}")
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 204 No Content
+// No response body - successful deletion
+```
+
+</ResponseExample>
+
+## Status Codes
+
+<ResponseField name="204" type="No Content">
+  Note template generation job deleted successfully
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Invalid or missing API key
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  Note template generation job with the specified ID was not found or was already deleted
+</ResponseField>
+
+<ResponseField name="500" type="Internal Server Error">
+  Server error occurred while deleting the job
+</ResponseField>
+
+## Use Cases
+
+### Cleanup Completed Jobs
+
+Delete old template generation jobs that are no longer needed:
+
+```javascript
+async function cleanupOldTemplateJobs() {
+  // Assuming you have a way to list jobs (not implemented in current API)
+  // This is a conceptual example
+  
+  const oldJobIds = [
+    'template_old123',
+    'template_old456',
+    'template_old789'
+  ];
+
+  for (const jobId of oldJobIds) {
+    try {
+      await fetch(`https://api.sully.ai/alpha/note-templates/${jobId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer YOUR_API_KEY' }
+      });
+      console.log(`Deleted job: ${jobId}`);
+    } catch (error) {
+      console.error(`Failed to delete job ${jobId}:`, error);
+    }
+  }
+}
+```
+
+### Cancel Processing Jobs
+
+Remove jobs that are no longer needed while they're still processing:
+
+```javascript
+async function cancelTemplateJob(jobId) {
+  try {
+    // First check if the job is still processing
+    const statusResponse = await fetch(`https://api.sully.ai/alpha/note-templates/${jobId}`, {
+      headers: { 'Authorization': 'Bearer YOUR_API_KEY' }
+    });
+    
+    const statusData = await statusResponse.json();
+    
+    if (statusData.data.status === 'processing' || statusData.data.status === 'pending') {
+      const deleteResponse = await fetch(`https://api.sully.ai/alpha/note-templates/${jobId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer YOUR_API_KEY' }
+      });
+      
+      if (deleteResponse.ok) {
+        console.log('Template generation job cancelled successfully');
+      } else {
+        console.error('Failed to cancel job');
+      }
+    } else {
+      console.log(`Job is ${statusData.data.status}, cannot cancel`);
+    }
+  } catch (error) {
+    console.error('Error cancelling job:', error);
+  }
+}
+```
+
+### Batch Deletion
+
+Delete multiple template jobs at once:
+
+```javascript
+async function deleteMultipleJobs(jobIds) {
+  const deletePromises = jobIds.map(jobId =>
+    fetch(`https://api.sully.ai/alpha/note-templates/${jobId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer YOUR_API_KEY' }
+    })
+  );
+
+  try {
+    const results = await Promise.allSettled(deletePromises);
+    
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled' && result.value.ok) {
+        console.log(`Successfully deleted job: ${jobIds[index]}`);
+      } else {
+        console.error(`Failed to delete job: ${jobIds[index]}`);
+      }
+    });
+  } catch (error) {
+    console.error('Error in batch deletion:', error);
+  }
+}
+
+// Usage
+const jobsToDelete = [
+  'template_abc123',
+  'template_def456',
+  'template_ghi789'
+];
+
+deleteMultipleJobs(jobsToDelete);
+```
+
+## Important Notes
+
+1. **Irreversible Action**: Deleted template generation jobs cannot be recovered
+2. **Results Loss**: Any generated templates and analysis insights will be permanently lost
+3. **Processing Jobs**: You can delete jobs even while they're processing
+4. **Billing**: You may still be charged for processing time even if you delete the job before completion
+5. **No Cascading**: Deleting a job does not affect any templates you may have already exported or saved elsewhere
+
+## Data Privacy
+
+When you delete a note template generation job:
+- All uploaded provider notes are permanently removed
+- Generated templates and insights are deleted
+- Analysis data and intermediate processing results are purged
+- No trace of the job remains in our systems
+
+## Best Practices
+
+### Before Deletion
+- **Save Results**: Export any templates or insights you want to keep
+- **Verify Job ID**: Double-check the job ID to avoid accidental deletion
+- **Consider Timing**: For processing jobs, consider waiting for completion if results might be useful
+
+### Cleanup Strategy
+- **Regular Cleanup**: Periodically delete old, completed jobs to manage storage
+- **Failed Jobs**: Promptly delete failed jobs unless you need to review error details
+- **Test Jobs**: Clean up test or experimental jobs after reviewing results
+
+## Related Endpoints
+
+- [Create Note Template](/api-reference-alpha/note-templates/create) - Create a new template generation job
+- [Get Note Template](/api-reference-alpha/note-templates/get) - Retrieve a template generation job

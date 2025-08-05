@@ -1,0 +1,195 @@
+---
+title: "Get Medical Consensus"
+api: "GET /alpha/consensus/{id}"
+description: "Retrieve a medical consensus request by its unique identifier."
+---
+
+## Overview
+
+Retrieve the details and results of a specific medical consensus request using its unique identifier. This endpoint returns the current status of the request and any available consensus results.
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  The unique identifier of the consensus request to retrieve
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  The consensus request object with current status and results
+  
+  <Expandable title="Consensus Request Object">
+    <ResponseField name="id" type="string">
+      Unique identifier for the consensus request
+    </ResponseField>
+    
+    <ResponseField name="status" type="string">
+      Current status of the consensus request
+      - `pending`: Request is queued for processing
+      - `processing`: Currently being analyzed
+      - `completed`: Analysis complete, results available
+      - `failed`: Processing failed
+    </ResponseField>
+    
+    <ResponseField name="created_at" type="string">
+      Timestamp when the request was created (ISO 8601 format)
+    </ResponseField>
+    
+    <ResponseField name="updated_at" type="string" optional>
+      Timestamp when the request was last updated (ISO 8601 format)
+    </ResponseField>
+    
+    <ResponseField name="result" type="object" optional>
+      Available when status is "completed" or "failed"
+      
+      <Expandable title="Result Object">
+        <ResponseField name="consensus_response" type="string" optional>
+          The medical consensus response (present when request is accepted and completed)
+        </ResponseField>
+        
+        <ResponseField name="error" type="string" optional>
+          Error message (present when request is rejected or processing fails)
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="metadata" type="object" optional>
+      Additional metadata associated with the request
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X GET "https://api.sully.ai/alpha/consensus/consensus_abc123def456" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.sully.ai/alpha/consensus/consensus_abc123def456', {
+  method: 'GET',
+  headers: {
+    'Authorization': 'Bearer YOUR_API_KEY'
+  }
+});
+
+const data = await response.json();
+console.log(data);
+```
+
+```python Python
+import requests
+
+url = "https://api.sully.ai/alpha/consensus/consensus_abc123def456"
+headers = {
+    "Authorization": "Bearer YOUR_API_KEY"
+}
+
+response = requests.get(url, headers=headers)
+result = response.json()
+print(result)
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200 OK - Completed Request
+{
+  "data": {
+    "id": "consensus_abc123def456",
+    "status": "completed",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:35:00Z",
+    "result": {
+      "consensus_response": "Based on the clinical presentation of chest pain, shortness of breath, and elevated troponin levels in a 45-year-old patient, the most likely diagnosis is acute myocardial infarction (AMI). However, several differential diagnoses should be considered including pulmonary embolism, aortic dissection, and myocarditis. Immediate ECG and chest X-ray are recommended, along with serial troponin measurements. Consider CT pulmonary angiogram if PE is suspected, and cardiology consultation is recommended."
+    },
+    "metadata": {}
+  }
+}
+```
+
+```json 200 OK - Pending Request
+{
+  "data": {
+    "id": "consensus_abc123def456",
+    "status": "pending",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z",
+    "metadata": {}
+  }
+}
+```
+
+```json 200 OK - Failed Request
+{
+  "data": {
+    "id": "consensus_abc123def456",
+    "status": "failed",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:35:00Z",
+    "result": {
+      "error": "Request was rejected by the medical consensus bouncer due to insufficient clinical context"
+    },
+    "metadata": {}
+  }
+}
+```
+
+</ResponseExample>
+
+## Status Codes
+
+<ResponseField name="200" type="OK">
+  Consensus request retrieved successfully
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Invalid or missing API key
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  Consensus request with the specified ID was not found
+</ResponseField>
+
+<ResponseField name="500" type="Internal Server Error">
+  Server error occurred while retrieving the request
+</ResponseField>
+
+## Polling for Results
+
+Since consensus requests are processed asynchronously, you may need to poll this endpoint periodically to check for completion:
+
+```javascript
+async function waitForConsensus(consensusId) {
+  let status = 'pending';
+  
+  while (status === 'pending' || status === 'processing') {
+    const response = await fetch(`https://api.sully.ai/alpha/consensus/${consensusId}`, {
+      headers: { 'Authorization': 'Bearer YOUR_API_KEY' }
+    });
+    
+    const data = await response.json();
+    status = data.data.status;
+    
+    if (status === 'completed') {
+      return data.data;
+    }
+    
+    if (status === 'failed') {
+      throw new Error('Consensus processing failed');
+    }
+    
+    // Wait 5 seconds before polling again
+    await new Promise(resolve => setTimeout(resolve, 5000));
+  }
+}
+```
+
+## Related Endpoints
+
+- [Create Consensus](/api-reference-alpha/consensus/create) - Create a new consensus request
+- [List Consensus](/api-reference-alpha/consensus/list) - List all consensus requests
+- [Delete Consensus](/api-reference-alpha/consensus/delete) - Delete a consensus request

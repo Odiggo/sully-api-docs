@@ -96,75 +96,29 @@
         }
       },
       {
-        "version": "v1",
+        "version": "alpha",
         "tabs": [
-          {
-            "tab": "Documentation",
-            "groups": [
-              {
-                "group": "Guides",
-                "pages": ["documentation/overview", "documentation/notes"]
-              }
-            ]
-          },
           {
             "tab": "API Reference",
             "groups": [
               {
                 "group": "Getting Started",
-                "pages": ["api-reference/getting-started/authentication"]
+                "pages": ["api-reference-alpha/getting-started/authentication"]
               },
               {
-                "group": "Notes",
+                "group": "Medical Consensus",
                 "pages": [
-                  "api-reference/notes/get",
-                  "api-reference/notes/create",
-                  "api-reference/notes/delete"
+                  "api-reference-alpha/consensus/create",
+                  "api-reference-alpha/consensus/get",
+                  "api-reference-alpha/consensus/delete"
                 ]
               },
               {
-                "group": "Note Styles",
-                "pages": ["api-reference/note-styles/create"]
-              },
-              {
-                "group": "Audio Transcriptions",
+                "group": "Note Templates",
                 "pages": [
-                  "api-reference/audio-transcriptions/get",
-                  "api-reference/audio-transcriptions/create",
-                  "api-reference/audio-transcriptions/delete",
-                  "api-reference/audio-transcriptions/streaming",
-                  "api-reference/audio-transcriptions/stream-token",
-                  "api-reference/audio-transcriptions/languages"
-                ]
-              },
-              {
-                "group": "Codings",
-                "pages": [
-                  "api-reference/codings/get",
-                  "api-reference/codings/create",
-                  "api-reference/codings/delete"
-                ]
-              },
-              {
-                "group": "Macros",
-                "pages": ["api-reference/macros/detect"]
-              },
-              {
-                "group": "Utils",
-                "pages": ["api-reference/utils/text-to-json"]
-              },
-              {
-                "group": "Events",
-                "pages": [
-                  "api-reference/events/overview",
-                  "api-reference/events/webhooks"
-                ]
-              },
-              {
-                "group": "Schemas",
-                "pages": [
-                  "api-reference/schemas/soap-note",
-                  "api-reference/schemas/note-template"
+                  "api-reference-alpha/note-templates/create",
+                  "api-reference-alpha/note-templates/get",
+                  "api-reference-alpha/note-templates/delete"
                 ]
               }
             ]

@@ -1,0 +1,206 @@
+---
+title: "Authentication (Alpha)"
+description: "Learn how to authenticate with the Sully.ai Alpha API to access experimental features like medical consensus and note templates."
+---
+
+## Overview
+
+The Sully.ai Alpha API uses the same authentication system as our stable API. All requests must include a valid API key in the Authorization header.
+
+<Warning>
+  **Alpha API Notice**: This is an experimental version of our API. Features may change without notice and should not be used in production environments without careful consideration.
+</Warning>
+
+## API Key Authentication
+
+All Alpha API requests require authentication using your API key:
+
+```bash
+Authorization: Bearer YOUR_API_KEY
+```
+
+## Getting Your API Key
+
+1. Sign up for a Sully.ai account at [dashboard.api.sully.ai](https://dashboard.api.sully.ai)
+2. Navigate to the API Keys section in your dashboard
+3. Generate a new API key or use an existing one
+4. Copy the key and store it securely
+
+<Warning>
+  **Keep your API key secure**: Never expose your API key in client-side code or public repositories. Store it as an environment variable or in a secure configuration file.
+</Warning>
+
+## Base URL
+
+The Alpha API uses the same base URL as our stable API:
+
+```
+https://api.sully.ai
+```
+
+Alpha endpoints are prefixed with `/alpha/` to distinguish them from stable endpoints.
+
+## Example Request
+
+Here's how to make an authenticated request to the Alpha API:
+
+```bash cURL
+curl -X POST "https://api.sully.ai/alpha/consensus" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What are the treatment options for Type 2 diabetes?"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.sully.ai/alpha/consensus', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    query: "What are the treatment options for Type 2 diabetes?"
+  })
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+import os
+
+url = "https://api.sully.ai/alpha/consensus"
+headers = {
+    "Authorization": f"Bearer {os.getenv('SULLY_API_KEY')}",
+    "Content-Type": "application/json"
+}
+data = {
+    "query": "What are the treatment options for Type 2 diabetes?"
+}
+
+response = requests.post(url, headers=headers, json=data)
+result = response.json()
+```
+
+## Error Responses
+
+### 401 Unauthorized
+
+If your API key is missing or invalid, you'll receive a 401 error:
+
+```json
+{
+  "error": "Unauthorized",
+  "message": "Invalid or missing API key"
+}
+```
+
+### 403 Forbidden
+
+If your account doesn't have access to alpha features:
+
+```json
+{
+  "error": "Forbidden",
+  "message": "Alpha API access not enabled for this account"
+}
+```
+
+## Rate Limiting
+
+Alpha API endpoints may have different rate limits than stable endpoints:
+
+- **Medical Consensus**: Limited per day based on your plan
+- **Note Templates**: Limited per request based on complexity
+- **Rate limit headers**: Check response headers for current limits
+- **Exceeded limits**: Results in 429 Too Many Requests
+
+Rate limit information is included in response headers:
+
+```
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 1640995200
+```
+
+## Best Practices
+
+### Environment Variables
+
+Store your API key as an environment variable:
+
+```bash
+export SULLY_API_KEY="your_api_key_here"
+```
+
+### Error Handling
+
+Always handle authentication errors gracefully:
+
+```javascript
+async function makeAuthenticatedRequest(endpoint, data) {
+  try {
+    const response = await fetch(`https://api.sully.ai${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.SULLY_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+
+    if (response.status === 401) {
+      throw new Error('Invalid API key');
+    }
+
+    if (response.status === 403) {
+      throw new Error('Alpha API access not enabled');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Authentication error:', error.message);
+    throw error;
+  }
+}
+```
+
+### Testing
+
+Test your authentication with a simple request:
+
+```bash
+curl -X GET "https://api.sully.ai/alpha/consensus" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+## Alpha API Features
+
+Current alpha features include:
+
+- **Medical Consensus**: Get expert medical opinions on clinical queries
+- **Note Templates**: Generate note templates from provider notes
+- **Advanced Analytics**: Enhanced insights and reporting (coming soon)
+- **AI-Powered Recommendations**: Intelligent suggestions for clinical workflows (coming soon)
+
+## Support
+
+For alpha API issues:
+
+- Email: [support@sully.ai](mailto:support@sully.ai)
+- Include "Alpha API" in your subject line
+- Provide your account ID and request details
+
+## Migration to Stable
+
+When alpha features graduate to stable:
+
+1. We'll announce the migration timeline
+2. Endpoints will be available at both `/alpha/` and stable paths
+3. You'll have time to update your integration
+4. Alpha endpoints will eventually be deprecated
+
+Stay updated on our [blog](https://www.sully.ai/blog) for alpha feature announcements and migration guides.
