@@ -13,9 +13,7 @@ The medical consensus endpoint allows you to submit queries to get expert medica
 This endpoint is rate limited to prevent abuse:
 - **Limit**: Configurable requests per day (based on your plan)
 - **Window**: 24 hours
-- **Behavior**: Requests exceeding the limit will be blocked for 24 hours
-
-Rate limiting can be disabled in development environments via the `CONSENSUS_SKIP_RATE_LIMITING` environment variable.
+- **Behavior**: Requests exceeding the limit will be blocked
 
 ## Request Body
 
@@ -158,5 +156,4 @@ print(result)
 After creating a consensus request:
 
 1. **Poll for results**: Use the [Get Consensus](/api-reference-alpha/consensus/get) endpoint with the returned ID to check the status and retrieve results
-2. **List requests**: Use the [List Consensus](/api-reference-alpha/consensus/list) endpoint to see all your consensus requests
-3. **Clean up**: Use the [Delete Consensus](/api-reference-alpha/consensus/delete) endpoint to remove requests you no longer need
+2. **Clean up**: Use the [Delete Consensus](/api-reference-alpha/consensus/delete) endpoint to remove requests you no longer need
