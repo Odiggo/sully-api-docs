@@ -1,0 +1,162 @@
+---
+title: "Create Medical Consensus"
+api: "POST /alpha/consensus"
+description: "Create a new medical consensus request to get expert medical opinions on a query."
+---
+
+## Overview
+
+The medical consensus endpoint allows you to submit queries to get expert medical opinions and consensus from multiple sources. This is useful for getting second opinions, validating diagnoses, or exploring treatment options.
+
+## Rate Limiting
+
+This endpoint is rate limited to prevent abuse:
+- **Limit**: Configurable requests per day (based on your plan)
+- **Window**: 24 hours
+- **Behavior**: Requests exceeding the limit will be blocked for 24 hours
+
+Rate limiting can be disabled in development environments via the `CONSENSUS_SKIP_RATE_LIMITING` environment variable.
+
+## Request Body
+
+<ParamField body="query" type="string" required>
+  The medical query or question you want to get consensus on. This should be a clear, specific medical question or scenario.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  The created consensus request object
+  
+  <Expandable title="Consensus Request Object">
+    <ResponseField name="id" type="string">
+      Unique identifier for the consensus request
+    </ResponseField>
+    
+    <ResponseField name="status" type="string">
+      Current status of the consensus request
+      - `pending`: Request is queued for processing
+      - `processing`: Currently being analyzed
+      - `completed`: Analysis complete, results available
+      - `failed`: Processing failed
+    </ResponseField>
+    
+    <ResponseField name="created_at" type="string">
+      Timestamp when the request was created (ISO 8601 format)
+    </ResponseField>
+    
+    <ResponseField name="updated_at" type="string" optional>
+      Timestamp when the request was last updated (ISO 8601 format)
+    </ResponseField>
+    
+    <ResponseField name="result" type="object" optional>
+      Available when status is "completed" or "failed"
+      
+      <Expandable title="Result Object">
+        <ResponseField name="consensus_response" type="string" optional>
+          The medical consensus response (present when request is accepted and completed)
+        </ResponseField>
+        
+        <ResponseField name="error" type="string" optional>
+          Error message (present when request is rejected or processing fails)
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="metadata" type="object" optional>
+      Additional metadata associated with the request
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X POST "https://api.sully.ai/alpha/consensus" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What are the differential diagnoses for a 45-year-old patient presenting with chest pain, shortness of breath, and elevated troponin levels?"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.sully.ai/alpha/consensus', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    query: "What are the differential diagnoses for a 45-year-old patient presenting with chest pain, shortness of breath, and elevated troponin levels?"
+  })
+});
+
+const data = await response.json();
+console.log(data);
+```
+
+```python Python
+import requests
+
+url = "https://api.sully.ai/alpha/consensus"
+headers = {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json"
+}
+data = {
+    "query": "What are the differential diagnoses for a 45-year-old patient presenting with chest pain, shortness of breath, and elevated troponin levels?"
+}
+
+response = requests.post(url, headers=headers, json=data)
+result = response.json()
+print(result)
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 202 Created
+{
+  "data": {
+    "id": "consensus_abc123def456",
+    "status": "pending",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z",
+    "metadata": {}
+  }
+}
+```
+
+</ResponseExample>
+
+## Status Codes
+
+<ResponseField name="202" type="Accepted">
+  Consensus request created successfully and is being processed
+</ResponseField>
+
+<ResponseField name="400" type="Bad Request">
+  Invalid request body or missing required parameters
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Invalid or missing API key
+</ResponseField>
+
+<ResponseField name="429" type="Too Many Requests">
+  Rate limit exceeded - wait before making another request
+</ResponseField>
+
+<ResponseField name="500" type="Internal Server Error">
+  Server error occurred while processing the request
+</ResponseField>
+
+## Next Steps
+
+After creating a consensus request:
+
+1. **Poll for results**: Use the [Get Consensus](/api-reference-alpha/consensus/get) endpoint with the returned ID to check the status and retrieve results
+2. **List requests**: Use the [List Consensus](/api-reference-alpha/consensus/list) endpoint to see all your consensus requests
+3. **Clean up**: Use the [Delete Consensus](/api-reference-alpha/consensus/delete) endpoint to remove requests you no longer need

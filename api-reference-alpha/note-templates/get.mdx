@@ -1,0 +1,395 @@
+---
+title: "Get Note Template"
+api: "GET /alpha/note-templates/{id}"
+description: "Retrieve a note template generation job by its unique identifier."
+---
+
+## Overview
+
+Retrieve the details and results of a specific note template generation job using its unique identifier. This endpoint returns the current status of the job and any available template results.
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  The unique identifier of the note template generation job to retrieve
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  The note template generation job object with current status and results
+  
+  <Expandable title="Note Template Job Object">
+    <ResponseField name="id" type="string">
+      Unique identifier for the template generation job
+    </ResponseField>
+    
+    <ResponseField name="status" type="string">
+      Current status of the generation job
+      - `pending`: Job is queued for processing
+      - `processing`: Currently analyzing notes and generating template
+      - `completed`: Template generation complete, results available
+      - `failed`: Processing failed
+    </ResponseField>
+    
+    <ResponseField name="created_at" type="string">
+      Timestamp when the job was created (ISO 8601 format)
+    </ResponseField>
+    
+    <ResponseField name="updated_at" type="string" optional>
+      Timestamp when the job was last updated (ISO 8601 format)
+    </ResponseField>
+    
+    <ResponseField name="error" type="string" optional>
+      Error message if the job failed
+    </ResponseField>
+    
+    <ResponseField name="result" type="object" optional>
+      Available when status is "completed"
+      
+      <Expandable title="Template Result Object">
+        <ResponseField name="template" type="object" optional>
+          The generated note template
+          
+          <Expandable title="Template Object">
+            <ResponseField name="id" type="string">
+              Unique identifier for the template
+            </ResponseField>
+            
+            <ResponseField name="title" type="string">
+              Generated title for the template
+            </ResponseField>
+            
+            <ResponseField name="globalPrompt" type="string" optional>
+              Global prompt/instructions for the template
+            </ResponseField>
+            
+            <ResponseField name="sections" type="array">
+              Array of template sections with structure and prompts
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+        
+        <ResponseField name="insights" type="object" optional>
+          Analysis insights from the provider notes
+          
+          <Expandable title="Analysis Insights">
+            <ResponseField name="commonHeadings" type="array">
+              Common headings found across notes
+              
+              <Expandable title="Heading Object">
+                <ResponseField name="text" type="string">
+                  The heading text
+                </ResponseField>
+                
+                <ResponseField name="frequency" type="number">
+                  How often this heading appeared
+                </ResponseField>
+                
+                <ResponseField name="level" type="number">
+                  Heading level (1-6)
+                </ResponseField>
+              </Expandable>
+            </ResponseField>
+            
+            <ResponseField name="commonSections" type="array">
+              Common sections and their patterns
+            </ResponseField>
+            
+            <ResponseField name="styleAnalysis" type="object">
+              Identified tone and style patterns
+              
+              <Expandable title="Style Analysis">
+                <ResponseField name="predominantTone" type="string">
+                  The main tone: formal, casual, technical, friendly, or instructional
+                </ResponseField>
+                
+                <ResponseField name="detailLevel" type="string">
+                  Level of detail: exhaustive, detailed, standard, brief, or minimal
+                </ResponseField>
+                
+                <ResponseField name="commonPhrases" type="array">
+                  Frequently used phrases
+                </ResponseField>
+                
+                <ResponseField name="writingStyle" type="string">
+                  Description of the writing style
+                </ResponseField>
+              </Expandable>
+            </ResponseField>
+            
+            <ResponseField name="statistics" type="object">
+              Statistical information about the analyzed notes
+              
+              <Expandable title="Statistics">
+                <ResponseField name="totalNotes" type="number">
+                  Number of notes analyzed
+                </ResponseField>
+                
+                <ResponseField name="averageNoteLength" type="number">
+                  Average length of notes in characters
+                </ResponseField>
+                
+                <ResponseField name="mostCommonWords" type="array">
+                  Most frequently used words
+                </ResponseField>
+              </Expandable>
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+        
+        <ResponseField name="error" type="string" optional>
+          Error message if template generation failed
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X GET "https://api.sully.ai/alpha/note-templates/template_abc123def456" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.sully.ai/alpha/note-templates/template_abc123def456', {
+  method: 'GET',
+  headers: {
+    'Authorization': 'Bearer YOUR_API_KEY'
+  }
+});
+
+const data = await response.json();
+console.log(data);
+```
+
+```python Python
+import requests
+
+url = "https://api.sully.ai/alpha/note-templates/template_abc123def456"
+headers = {
+    "Authorization": "Bearer YOUR_API_KEY"
+}
+
+response = requests.get(url, headers=headers)
+result = response.json()
+print(result)
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200 OK - Completed Job
+{
+  "data": {
+    "id": "template_abc123def456",
+    "status": "completed",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:35:00Z",
+    "result": {
+      "template": {
+        "id": "template_xyz789",
+        "title": "Cardiology Consultation Template",
+        "globalPrompt": "Create a comprehensive cardiology consultation note following standard clinical documentation practices.",
+        "sections": [
+          {
+            "id": "chief_complaint",
+            "title": "Chief Complaint",
+            "type": "text",
+            "prompt": "Document the patient's primary concern in their own words."
+          },
+          {
+            "id": "hpi",
+            "title": "History of Present Illness",
+            "type": "text",
+            "prompt": "Provide detailed chronological account of the current illness including onset, duration, character, and associated symptoms."
+          },
+          {
+            "id": "physical_exam",
+            "title": "Physical Examination",
+            "type": "structured",
+            "prompt": "Document vital signs and focused cardiovascular examination findings."
+          },
+          {
+            "id": "assessment",
+            "title": "Assessment",
+            "type": "text",
+            "prompt": "Provide clinical impression and differential diagnosis."
+          },
+          {
+            "id": "plan",
+            "title": "Plan",
+            "type": "list",
+            "prompt": "Outline diagnostic tests, treatments, and follow-up recommendations."
+          }
+        ]
+      },
+      "insights": {
+        "commonHeadings": [
+          {
+            "text": "Chief Complaint",
+            "frequency": 2,
+            "level": 1
+          },
+          {
+            "text": "History of Present Illness",
+            "frequency": 2,
+            "level": 1
+          },
+          {
+            "text": "Physical Exam",
+            "frequency": 2,
+            "level": 1
+          }
+        ],
+        "styleAnalysis": {
+          "predominantTone": "formal",
+          "detailLevel": "detailed",
+          "commonPhrases": [
+            "presents with",
+            "vital signs stable",
+            "follow-up in"
+          ],
+          "writingStyle": "Structured clinical documentation with systematic approach to patient assessment"
+        },
+        "statistics": {
+          "totalNotes": 2,
+          "averageNoteLength": 245,
+          "mostCommonWords": [
+            {
+              "word": "patient",
+              "count": 4
+            },
+            {
+              "word": "chest",
+              "count": 3
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+```json 200 OK - Pending Job
+{
+  "data": {
+    "id": "template_abc123def456",
+    "status": "pending",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+```json 200 OK - Failed Job
+{
+  "data": {
+    "id": "template_abc123def456",
+    "status": "failed",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:35:00Z",
+    "error": "Unable to identify consistent patterns in the provided notes. Please ensure notes follow a similar structure and format."
+  }
+}
+```
+
+</ResponseExample>
+
+## Status Codes
+
+<ResponseField name="200" type="OK">
+  Note template generation job retrieved successfully
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Invalid or missing API key
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  Note template generation job with the specified ID was not found
+</ResponseField>
+
+<ResponseField name="500" type="Internal Server Error">
+  Server error occurred while retrieving the job
+</ResponseField>
+
+## Polling for Results
+
+Since note template generation is processed asynchronously, you may need to poll this endpoint periodically to check for completion:
+
+```javascript
+async function waitForTemplate(jobId) {
+  let status = 'pending';
+  
+  while (status === 'pending' || status === 'processing') {
+    const response = await fetch(`https://api.sully.ai/alpha/note-templates/${jobId}`, {
+      headers: { 'Authorization': 'Bearer YOUR_API_KEY' }
+    });
+    
+    const data = await response.json();
+    status = data.data.status;
+    
+    if (status === 'completed') {
+      return data.data;
+    }
+    
+    if (status === 'failed') {
+      throw new Error(`Template generation failed: ${data.data.error}`);
+    }
+    
+    // Wait 10 seconds before polling again
+    await new Promise(resolve => setTimeout(resolve, 10000));
+  }
+}
+```
+
+## Understanding the Results
+
+### Template Structure
+The generated template includes:
+- **Sections**: Organized structure based on your notes
+- **Prompts**: AI-generated prompts for each section
+- **Types**: Section types (text, list, structured) based on content patterns
+
+### Analysis Insights
+The insights provide valuable information about your documentation patterns:
+- **Common Headings**: Most frequently used section headers
+- **Style Analysis**: Your writing tone and detail preferences
+- **Statistics**: Quantitative analysis of your notes
+
+### Using the Template
+Once generated, you can:
+1. Import the template into your documentation system
+2. Customize sections and prompts as needed
+3. Use it as a starting point for similar note types
+
+## Webhook Integration
+
+For production use, consider setting up webhooks instead of polling:
+
+```javascript
+// Webhook handler example
+app.post('/webhook/note-template', (req, res) => {
+  const { jobId, status, result } = req.body;
+  
+  if (status === 'completed') {
+    // Process the completed template
+    console.log('Template ready:', result.template);
+  } else if (status === 'failed') {
+    // Handle the error
+    console.error('Template generation failed:', req.body.error);
+  }
+  
+  res.status(200).send('OK');
+});
+```
+
+## Related Endpoints
+
+- [Create Note Template](/api-reference-alpha/note-templates/create) - Create a new template generation job
+- [Delete Note Template](/api-reference-alpha/note-templates/delete) - Delete a template generation job

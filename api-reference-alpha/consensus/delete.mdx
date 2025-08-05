@@ -1,0 +1,159 @@
+---
+title: "Delete Medical Consensus"
+api: "DELETE /alpha/consensus/{id}"
+description: "Delete a medical consensus request by its unique identifier."
+---
+
+## Overview
+
+Permanently delete a medical consensus request and all associated data. This action cannot be undone.
+
+<Warning>
+  **This action is irreversible**. Once a consensus request is deleted, it cannot be recovered. Make sure you have saved any important results before deletion.
+</Warning>
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  The unique identifier of the consensus request to delete
+</ParamField>
+
+## Response
+
+This endpoint returns no content on successful deletion.
+
+<RequestExample>
+
+```bash cURL
+curl -X DELETE "https://api.sully.ai/alpha/consensus/consensus_abc123def456" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.sully.ai/alpha/consensus/consensus_abc123def456', {
+  method: 'DELETE',
+  headers: {
+    'Authorization': 'Bearer YOUR_API_KEY'
+  }
+});
+
+if (response.ok) {
+  console.log('Consensus request deleted successfully');
+} else {
+  console.error('Failed to delete consensus request');
+}
+```
+
+```python Python
+import requests
+
+url = "https://api.sully.ai/alpha/consensus/consensus_abc123def456"
+headers = {
+    "Authorization": "Bearer YOUR_API_KEY"
+}
+
+response = requests.delete(url, headers=headers)
+
+if response.status_code == 204:
+    print("Consensus request deleted successfully")
+else:
+    print(f"Failed to delete consensus request: {response.status_code}")
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 204 No Content
+// No response body - successful deletion
+```
+
+</ResponseExample>
+
+## Status Codes
+
+<ResponseField name="204" type="No Content">
+  Consensus request deleted successfully
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Invalid or missing API key
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  Consensus request with the specified ID was not found or was already deleted
+</ResponseField>
+
+<ResponseField name="500" type="Internal Server Error">
+  Server error occurred while deleting the request
+</ResponseField>
+
+## Use Cases
+
+### Cleanup Completed Requests
+
+Delete old consensus requests that are no longer needed:
+
+```javascript
+async function cleanupOldRequests() {
+  // Get all requests
+  const response = await fetch('https://api.sully.ai/alpha/consensus', {
+    headers: { 'Authorization': 'Bearer YOUR_API_KEY' }
+  });
+  
+  const data = await response.json();
+  const oldRequests = data.data.filter(request => {
+    const createdDate = new Date(request.createdAt);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    return createdDate < thirtyDaysAgo && request.status === 'completed';
+  });
+
+  // Delete old requests
+  for (const request of oldRequests) {
+    await fetch(`https://api.sully.ai/alpha/consensus/${request.id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer YOUR_API_KEY' }
+    });
+  }
+  
+  console.log(`Deleted ${oldRequests.length} old requests`);
+}
+```
+
+### Cancel Pending Requests
+
+Remove requests that are no longer needed:
+
+```javascript
+async function cancelPendingRequest(consensusId) {
+  try {
+    const response = await fetch(`https://api.sully.ai/alpha/consensus/${consensusId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer YOUR_API_KEY' }
+    });
+    
+    if (response.ok) {
+      console.log('Pending request cancelled successfully');
+    } else {
+      console.error('Failed to cancel request');
+    }
+  } catch (error) {
+    console.error('Error cancelling request:', error);
+  }
+}
+```
+
+## Important Notes
+
+1. **Irreversible Action**: Deleted consensus requests cannot be recovered
+2. **Results Loss**: Any consensus results will be permanently lost
+3. **Billing**: You may still be charged for processing time even if you delete the request
+4. **Rate Limiting**: Deletion does not affect your rate limiting quotas
+
+## Related Endpoints
+
+- [Create Consensus](/api-reference-alpha/consensus/create) - Create a new consensus request
+- [Get Consensus](/api-reference-alpha/consensus/get) - Get a specific consensus request
+- [List Consensus](/api-reference-alpha/consensus/list) - List all consensus requests

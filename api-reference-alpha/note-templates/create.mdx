@@ -1,0 +1,277 @@
+---
+title: "Create Note Template"
+api: "POST /alpha/note-templates"
+description: "Generate a custom note template by analyzing provider notes to identify common patterns and structures."
+---
+
+## Overview
+
+The note template generation endpoint analyzes your provider notes to automatically create customized note templates. This helps standardize documentation while preserving your unique clinical style and preferred structure.
+
+## Request Body
+
+<ParamField body="notes" type="array" required>
+  Array of provider notes to analyze (minimum 1, maximum 5 notes per request)
+  
+  <Expandable title="Provider Note Object">
+    <ParamField body="content" type="string" required>
+      The content of the provider note
+    </ParamField>
+    
+    <ParamField body="description" type="string" optional>
+      Optional description of the note (max 1000 characters)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="instructions" type="string" optional>
+  Optional instructions for the template generation process
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  The created note template generation job
+  
+  <Expandable title="Note Template Job Object">
+    <ResponseField name="id" type="string">
+      Unique identifier for the template generation job
+    </ResponseField>
+    
+    <ResponseField name="status" type="string">
+      Current status of the generation job
+      - `pending`: Job is queued for processing
+      - `processing`: Currently analyzing notes and generating template
+      - `completed`: Template generation complete, results available
+      - `failed`: Processing failed
+    </ResponseField>
+    
+    <ResponseField name="created_at" type="string">
+      Timestamp when the job was created (ISO 8601 format)
+    </ResponseField>
+    
+    <ResponseField name="updated_at" type="string" optional>
+      Timestamp when the job was last updated (ISO 8601 format)
+    </ResponseField>
+    
+    <ResponseField name="error" type="string" optional>
+      Error message if the job failed
+    </ResponseField>
+    
+    <ResponseField name="result" type="object" optional>
+      Available when status is "completed"
+      
+      <Expandable title="Template Result Object">
+        <ResponseField name="template" type="object" optional>
+          The generated note template
+          
+          <Expandable title="Template Object">
+            <ResponseField name="id" type="string">
+              Unique identifier for the template
+            </ResponseField>
+            
+            <ResponseField name="title" type="string">
+              Generated title for the template
+            </ResponseField>
+            
+            <ResponseField name="globalPrompt" type="string" optional>
+              Global prompt/instructions for the template
+            </ResponseField>
+            
+            <ResponseField name="sections" type="array">
+              Array of template sections
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+        
+        <ResponseField name="insights" type="object" optional>
+          Analysis insights from the provider notes
+          
+          <Expandable title="Analysis Insights">
+            <ResponseField name="commonHeadings" type="array">
+              Common headings found across notes
+            </ResponseField>
+            
+            <ResponseField name="commonSections" type="array">
+              Common sections and their patterns
+            </ResponseField>
+            
+            <ResponseField name="styleAnalysis" type="object">
+              Identified tone and style patterns
+            </ResponseField>
+            
+            <ResponseField name="statistics" type="object">
+              Statistical information about the analyzed notes
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+        
+        <ResponseField name="error" type="string" optional>
+          Error message if template generation failed
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X POST "https://api.sully.ai/alpha/note-templates" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "notes": [
+      {
+        "content": "Chief Complaint: Patient presents with chest pain.\n\nHistory of Present Illness: 45-year-old male with acute onset chest pain, radiating to left arm. Pain started 2 hours ago while at rest.\n\nPhysical Exam: Vital signs stable. Heart rate 88 bpm, BP 140/90.\n\nAssessment: Possible acute coronary syndrome.\n\nPlan: ECG, troponin levels, cardiology consult.",
+        "description": "Cardiology consultation note"
+      },
+      {
+        "content": "Chief Complaint: Shortness of breath.\n\nHistory of Present Illness: 67-year-old female with progressive dyspnea over 3 days. No chest pain.\n\nPhysical Exam: Crackles bilateral lower lobes. JVD present.\n\nAssessment: Congestive heart failure exacerbation.\n\nPlan: Chest X-ray, BNP, diuretics, follow-up in 48 hours.",
+        "description": "Heart failure follow-up"
+      }
+    ],
+    "instructions": "Focus on creating a template for cardiology consultations with emphasis on systematic assessment."
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.sully.ai/alpha/note-templates', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    notes: [
+      {
+        content: "Chief Complaint: Patient presents with chest pain.\n\nHistory of Present Illness: 45-year-old male with acute onset chest pain, radiating to left arm. Pain started 2 hours ago while at rest.\n\nPhysical Exam: Vital signs stable. Heart rate 88 bpm, BP 140/90.\n\nAssessment: Possible acute coronary syndrome.\n\nPlan: ECG, troponin levels, cardiology consult.",
+        description: "Cardiology consultation note"
+      },
+      {
+        content: "Chief Complaint: Shortness of breath.\n\nHistory of Present Illness: 67-year-old female with progressive dyspnea over 3 days. No chest pain.\n\nPhysical Exam: Crackles bilateral lower lobes. JVD present.\n\nAssessment: Congestive heart failure exacerbation.\n\nPlan: Chest X-ray, BNP, diuretics, follow-up in 48 hours.",
+        description: "Heart failure follow-up"
+      }
+    ],
+    instructions: "Focus on creating a template for cardiology consultations with emphasis on systematic assessment."
+  })
+});
+
+const data = await response.json();
+console.log(data);
+```
+
+```python Python
+import requests
+
+url = "https://api.sully.ai/alpha/note-templates"
+headers = {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json"
+}
+data = {
+    "notes": [
+        {
+            "content": "Chief Complaint: Patient presents with chest pain.\n\nHistory of Present Illness: 45-year-old male with acute onset chest pain, radiating to left arm. Pain started 2 hours ago while at rest.\n\nPhysical Exam: Vital signs stable. Heart rate 88 bpm, BP 140/90.\n\nAssessment: Possible acute coronary syndrome.\n\nPlan: ECG, troponin levels, cardiology consult.",
+            "description": "Cardiology consultation note"
+        },
+        {
+            "content": "Chief Complaint: Shortness of breath.\n\nHistory of Present Illness: 67-year-old female with progressive dyspnea over 3 days. No chest pain.\n\nPhysical Exam: Crackles bilateral lower lobes. JVD present.\n\nAssessment: Congestive heart failure exacerbation.\n\nPlan: Chest X-ray, BNP, diuretics, follow-up in 48 hours.",
+            "description": "Heart failure follow-up"
+        }
+    ],
+    "instructions": "Focus on creating a template for cardiology consultations with emphasis on systematic assessment."
+}
+
+response = requests.post(url, headers=headers, json=data)
+result = response.json()
+print(result)
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 202 Accepted
+{
+  "data": {
+    "id": "template_abc123def456",
+    "status": "pending",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+</ResponseExample>
+
+## Status Codes
+
+<ResponseField name="202" type="Accepted">
+  Note template generation job created successfully and is being processed
+</ResponseField>
+
+<ResponseField name="400" type="Bad Request">
+  Invalid request body, missing required fields, or validation errors
+  - Missing notes array
+  - Too many notes (maximum 5)
+  - Empty note content
+  - Description too long (maximum 1000 characters)
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Invalid or missing API key
+</ResponseField>
+
+<ResponseField name="500" type="Internal Server Error">
+  Server error occurred while processing the request
+</ResponseField>
+
+## Validation Rules
+
+<Warning>
+  **Input Validation**: The following validation rules apply:
+  - **Notes**: Minimum 1, maximum 5 notes per request
+  - **Content**: Required for each note, cannot be empty
+  - **Description**: Optional, maximum 1000 characters
+  - **Instructions**: Optional, no length limit
+</Warning>
+
+## Processing Time
+
+Note template generation is an asynchronous process that typically takes:
+- **Simple templates** (1-2 notes): 30-60 seconds
+- **Complex templates** (3-5 notes): 1-3 minutes
+
+## Next Steps
+
+After creating a note template generation job:
+
+1. **Poll for results**: Use the [Get Note Template](/api-reference-alpha/note-templates/get) endpoint with the returned ID to check status and retrieve results
+2. **Use webhooks**: Configure webhooks to get notified when processing completes (recommended)
+3. **Clean up**: Use the [Delete Note Template](/api-reference-alpha/note-templates/delete) endpoint to remove jobs you no longer need
+
+## Best Practices
+
+### Note Selection
+- **Quality over quantity**: Use your best, most representative notes
+- **Consistency**: Include notes with similar structure and style
+- **Completeness**: Use complete notes rather than fragments
+- **Variety**: Include different types of cases within the same specialty
+
+### Instructions
+- **Be specific**: "Focus on cardiology consultations" vs. "Make a good template"
+- **Mention priorities**: "Emphasize differential diagnosis section"
+- **Include preferences**: "Use bullet points for assessment and plan"
+
+### Example Instructions
+```json
+{
+  "instructions": "Create a template for emergency department visits focusing on rapid assessment. Prioritize chief complaint, vital signs, and disposition. Use concise bullet points for efficiency."
+}
+```
+
+## Related Endpoints
+
+- [Get Note Template](/api-reference-alpha/note-templates/get) - Retrieve a template generation job
+- [Delete Note Template](/api-reference-alpha/note-templates/delete) - Delete a template generation job
