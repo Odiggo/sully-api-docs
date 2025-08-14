@@ -1,14 +1,27 @@
 ---
-title: "Create Note Template"
+title: "Create Note Template Job"
 api: "POST /alpha/note-templates"
-description: "Generate a custom note template by analyzing provider notes to identify common patterns and structures."
+description: "Create a note template generation or refinement job to build or improve clinical documentation templates."
 ---
 
 ## Overview
 
-The note template generation endpoint analyzes your provider notes to automatically create customized note templates. This helps standardize documentation while preserving your unique clinical style and preferred structure.
+The unified note template endpoint supports two modes of operation:
+
+1. **Generation Mode**: Analyzes provider notes to automatically create customized note templates from scratch
+2. **Refinement Mode**: Improves existing templates based on instructions or before/after note comparisons
+
+This helps standardize documentation while preserving your unique clinical style and preferred structure.
 
 ## Request Body
+
+The request body varies depending on the operation mode:
+
+### Generation Mode (Default)
+
+<ParamField body="mode" type="string" optional>
+  Set to "generate" (default) to create a template from provider notes
+</ParamField>
 
 <ParamField body="notes" type="array" required>
   Array of provider notes to analyze (minimum 1, maximum 5 notes per request)
@@ -28,21 +41,59 @@ The note template generation endpoint analyzes your provider notes to automatica
   Optional instructions for the template generation process
 </ParamField>
 
+### Refinement Mode
+
+<ParamField body="mode" type="string" required>
+  Set to "refine" to improve an existing template
+</ParamField>
+
+<ParamField body="template" type="object" required>
+  The existing note template to refine (must be a complete NoteTemplate object)
+</ParamField>
+
+<ParamField body="instructions" type="string" optional>
+  Instructions for how to refine the template
+</ParamField>
+
+<ParamField body="note_comparison" type="object" optional>
+  Before/after note comparison to guide refinement
+  
+  <Expandable title="Note Comparison Object">
+    <ParamField body="before" type="string" required>
+      The note content before applying the template
+    </ParamField>
+    
+    <ParamField body="after" type="string" required>
+      The desired note content after applying the template
+    </ParamField>
+    
+    <ParamField body="description" type="string" optional>
+      Optional description of what changed (max 1000 characters)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
 ## Response
 
 <ResponseField name="data" type="object">
-  The created note template generation job
+  The created note template job
   
   <Expandable title="Note Template Job Object">
     <ResponseField name="id" type="string">
-      Unique identifier for the template generation job
+      Unique identifier for the template job
+    </ResponseField>
+    
+    <ResponseField name="mode" type="string">
+      The operation mode for this job
+      - `generation`: Creating a template from provider notes
+      - `refinement`: Improving an existing template
     </ResponseField>
     
     <ResponseField name="status" type="string">
-      Current status of the generation job
+      Current status of the job
       - `pending`: Job is queued for processing
-      - `processing`: Currently analyzing notes and generating template
-      - `completed`: Template generation complete, results available
+      - `processing`: Currently processing the request
+      - `completed`: Processing complete, results available
       - `failed`: Processing failed
     </ResponseField>
     
@@ -54,14 +105,14 @@ The note template generation endpoint analyzes your provider notes to automatica
       Timestamp when the job was last updated (ISO 8601 format)
     </ResponseField>
     
-    <ResponseField name="error" type="string" optional>
-      Error message if the job failed
-    </ResponseField>
-    
     <ResponseField name="result" type="object" optional>
-      Available when status is "completed"
+      Available when status is "completed" - format depends on mode
       
-      <Expandable title="Template Result Object">
+      <Expandable title="Generation Result">
+        <ResponseField name="type" type="string">
+          Set to "generation" for generation jobs
+        </ResponseField>
+        
         <ResponseField name="template" type="object" optional>
           The generated note template
           
@@ -105,22 +156,69 @@ The note template generation endpoint analyzes your provider notes to automatica
             </ResponseField>
           </Expandable>
         </ResponseField>
+      </Expandable>
+      
+      <Expandable title="Refinement Result">
+        <ResponseField name="type" type="string">
+          Set to "refinement" for refinement jobs
+        </ResponseField>
         
-        <ResponseField name="error" type="string" optional>
-          Error message if template generation failed
+        <ResponseField name="refined_template" type="object" optional>
+          The refined note template
+          
+          <Expandable title="Refined Template Object">
+            <ResponseField name="id" type="string">
+              Unique identifier for the refined template
+            </ResponseField>
+            
+            <ResponseField name="title" type="string">
+              Title for the refined template
+            </ResponseField>
+            
+            <ResponseField name="globalPrompt" type="string" optional>
+              Global prompt/instructions for the refined template
+            </ResponseField>
+            
+            <ResponseField name="sections" type="array">
+              Array of refined template sections
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+        
+        <ResponseField name="refinement_analysis" type="object" optional>
+          Analysis of what changed during refinement
+          
+          <Expandable title="Refinement Analysis">
+            <ResponseField name="changes_applied" type="array">
+              List of changes applied to the template
+            </ResponseField>
+            
+            <ResponseField name="note_comparison_insights" type="object" optional>
+              Insights from before/after note analysis (if provided)
+            </ResponseField>
+            
+            <ResponseField name="quality_metrics" type="object" optional>
+              Quality metrics for the refinement
+            </ResponseField>
+          </Expandable>
         </ResponseField>
       </Expandable>
+      
+      <ResponseField name="error" type="string" optional>
+        Error message if processing failed
+      </ResponseField>
     </ResponseField>
   </Expandable>
 </ResponseField>
 
 <RequestExample>
 
-```bash cURL
+```bash Generation Mode (cURL)
 curl -X POST "https://api.sully.ai/alpha/note-templates" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
+    "mode": "generate",
     "notes": [
       {
         "content": "Chief Complaint: Patient presents with chest pain.\n\nHistory of Present Illness: 45-year-old male with acute onset chest pain, radiating to left arm. Pain started 2 hours ago while at rest.\n\nPhysical Exam: Vital signs stable. Heart rate 88 bpm, BP 140/90.\n\nAssessment: Possible acute coronary syndrome.\n\nPlan: ECG, troponin levels, cardiology consult.",
@@ -135,7 +233,26 @@ curl -X POST "https://api.sully.ai/alpha/note-templates" \
   }'
 ```
 
-```javascript JavaScript
+```bash Refinement Mode (cURL)
+curl -X POST "https://api.sully.ai/alpha/note-templates" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mode": "refine",
+    "template": {
+      "id": "existing-template-123",
+      "title": "Cardiology Consultation Template",
+      "sections": [...]
+    },
+    "instructions": "Add more detailed assessment prompts and include differential diagnosis section",
+    "note_comparison": {
+      "before": "Assessment: Chest pain, likely cardiac.",
+      "after": "Assessment: Acute chest pain syndrome with features suggestive of unstable angina. Differential includes NSTEMI, aortic dissection, and pulmonary embolism. Risk stratification indicates intermediate probability for ACS."
+    }
+  }'
+```
+
+```javascript Generation Mode (JavaScript)
 const response = await fetch('https://api.sully.ai/alpha/note-templates', {
   method: 'POST',
   headers: {
@@ -143,6 +260,7 @@ const response = await fetch('https://api.sully.ai/alpha/note-templates', {
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
+    mode: 'generate',
     notes: [
       {
         content: "Chief Complaint: Patient presents with chest pain.\n\nHistory of Present Illness: 45-year-old male with acute onset chest pain, radiating to left arm. Pain started 2 hours ago while at rest.\n\nPhysical Exam: Vital signs stable. Heart rate 88 bpm, BP 140/90.\n\nAssessment: Possible acute coronary syndrome.\n\nPlan: ECG, troponin levels, cardiology consult.",
@@ -161,7 +279,35 @@ const data = await response.json();
 console.log(data);
 ```
 
-```python Python
+```javascript Refinement Mode (JavaScript)
+const response = await fetch('https://api.sully.ai/alpha/note-templates', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    mode: 'refine',
+    template: {
+      id: 'existing-template-123',
+      title: 'Cardiology Consultation Template',
+      sections: [
+        // ... existing template sections
+      ]
+    },
+    instructions: 'Add more detailed assessment prompts and include differential diagnosis section',
+    note_comparison: {
+      before: 'Assessment: Chest pain, likely cardiac.',
+      after: 'Assessment: Acute chest pain syndrome with features suggestive of unstable angina. Differential includes NSTEMI, aortic dissection, and pulmonary embolism. Risk stratification indicates intermediate probability for ACS.'
+    }
+  })
+});
+
+const data = await response.json();
+console.log(data);
+```
+
+```python Generation Mode (Python)
 import requests
 
 url = "https://api.sully.ai/alpha/note-templates"
@@ -170,6 +316,7 @@ headers = {
     "Content-Type": "application/json"
 }
 data = {
+    "mode": "generate",
     "notes": [
         {
             "content": "Chief Complaint: Patient presents with chest pain.\n\nHistory of Present Illness: 45-year-old male with acute onset chest pain, radiating to left arm. Pain started 2 hours ago while at rest.\n\nPhysical Exam: Vital signs stable. Heart rate 88 bpm, BP 140/90.\n\nAssessment: Possible acute coronary syndrome.\n\nPlan: ECG, troponin levels, cardiology consult.",
@@ -188,14 +335,56 @@ result = response.json()
 print(result)
 ```
 
+```python Refinement Mode (Python)
+import requests
+
+url = "https://api.sully.ai/alpha/note-templates"
+headers = {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json"
+}
+data = {
+    "mode": "refine",
+    "template": {
+        "id": "existing-template-123",
+        "title": "Cardiology Consultation Template",
+        "sections": [
+            # ... existing template sections
+        ]
+    },
+    "instructions": "Add more detailed assessment prompts and include differential diagnosis section",
+    "note_comparison": {
+        "before": "Assessment: Chest pain, likely cardiac.",
+        "after": "Assessment: Acute chest pain syndrome with features suggestive of unstable angina. Differential includes NSTEMI, aortic dissection, and pulmonary embolism. Risk stratification indicates intermediate probability for ACS."
+    }
+}
+
+response = requests.post(url, headers=headers, json=data)
+result = response.json()
+print(result)
+```
+
 </RequestExample>
 
 <ResponseExample>
 
-```json 202 Accepted
+```json Generation Job - 202 Accepted
 {
   "data": {
     "id": "template_abc123def456",
+    "mode": "generation",
+    "status": "pending",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+```json Refinement Job - 202 Accepted
+{
+  "data": {
+    "id": "template_xyz789ghi012",
+    "mode": "refinement",
     "status": "pending",
     "created_at": "2024-01-15T10:30:00Z",
     "updated_at": "2024-01-15T10:30:00Z"
@@ -208,15 +397,14 @@ print(result)
 ## Status Codes
 
 <ResponseField name="202" type="Accepted">
-  Note template generation job created successfully and is being processed
+  Note template job created successfully and is being processed
 </ResponseField>
 
 <ResponseField name="400" type="Bad Request">
   Invalid request body, missing required fields, or validation errors
-  - Missing notes array
-  - Too many notes (maximum 5)
-  - Empty note content
-  - Description too long (maximum 1000 characters)
+  - **Generation Mode**: Missing notes array, too many notes (maximum 5), empty note content, description too long (maximum 1000 characters)
+  - **Refinement Mode**: Missing template object, invalid template structure, note comparison validation errors
+  - **Both Modes**: Invalid mode value, malformed request structure
 </ResponseField>
 
 <ResponseField name="401" type="Unauthorized">
@@ -231,15 +419,23 @@ print(result)
 
 <Warning>
   **Input Validation**: The following validation rules apply:
+  
+  **Generation Mode:**
   - **Notes**: Minimum 1, maximum 5 notes per request
   - **Content**: Required for each note, cannot be empty
-  - **Description**: Optional, maximum 1000 characters
+  - **Description**: Optional, maximum 1000 characters per note
   - **Instructions**: Optional, no length limit
+  
+  **Refinement Mode:**
+  - **Template**: Required, must be a valid NoteTemplate object
+  - **Instructions**: Optional, no length limit
+  - **Note Comparison**: Optional, both before and after content required if provided
+  - **Description**: Optional, maximum 1000 characters for note comparison
 </Warning>
 
 ## Next Steps
 
-After creating a note template generation job:
+After creating a note template job:
 
 1. **Poll for results**: Use the [Get Note Template](/api-reference-alpha/note-templates/get) endpoint with the returned ID to check status and retrieve results
 2. **Use webhooks**: Configure webhooks to get notified when processing completes (recommended)
@@ -247,25 +443,50 @@ After creating a note template generation job:
 
 ## Best Practices
 
-### Note Selection
+### Generation Mode
+
+**Note Selection:**
 - **Quality over quantity**: Use your best, most representative notes
 - **Consistency**: Include notes with similar structure and style
 - **Completeness**: Use complete notes rather than fragments
 - **Variety**: Include different types of cases within the same specialty
 
-### Instructions
+**Instructions:**
 - **Be specific**: "Focus on cardiology consultations" vs. "Make a good template"
 - **Mention priorities**: "Emphasize differential diagnosis section"
 - **Include preferences**: "Use bullet points for assessment and plan"
 
+### Refinement Mode
+
+**Template Preparation:**
+- **Use existing templates**: Start with a working template that needs improvement
+- **Identify specific issues**: Know what aspects need refinement
+
+**Instructions:**
+- **Be precise**: "Add severity scoring to assessment section"
+- **Reference sections**: "Modify the plan section to include follow-up timeframes"
+- **Specify changes**: "Change from paragraph to bullet point format"
+
+**Note Comparisons:**
+- **Use real examples**: Provide actual before/after note content
+- **Show clear differences**: Highlight specific improvements needed
+- **Include context**: Explain why the changes are desired
+
 ### Example Instructions
-```json
+
+```json Generation Mode
 {
   "instructions": "Create a template for emergency department visits focusing on rapid assessment. Prioritize chief complaint, vital signs, and disposition. Use concise bullet points for efficiency."
 }
 ```
 
+```json Refinement Mode
+{
+  "instructions": "Enhance the assessment section to include severity scoring (1-10), differential diagnosis with at least 3 options, and risk stratification. Convert plan from paragraph to structured list format with categories: Diagnostics, Medications, Follow-up."
+}
+```
+
 ## Related Endpoints
 
-- [Get Note Template](/api-reference-alpha/note-templates/get) - Retrieve a template generation job
-- [Delete Note Template](/api-reference-alpha/note-templates/delete) - Delete a template generation job
+- [Get Note Template](/api-reference-alpha/note-templates/get) - Retrieve a template job and results
+- [Delete Note Template](/api-reference-alpha/note-templates/delete) - Delete a template job

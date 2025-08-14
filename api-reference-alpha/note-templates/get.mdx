@@ -1,34 +1,40 @@
 ---
-title: "Get Note Template"
+title: "Get Note Template Job"
 api: "GET /alpha/note-templates/{id}"
-description: "Retrieve a note template generation job by its unique identifier."
+description: "Retrieve a note template job (generation or refinement) by its unique identifier."
 ---
 
 ## Overview
 
-Retrieve the details and results of a specific note template generation job using its unique identifier. This endpoint returns the current status of the job and any available template results.
+Retrieve the details and results of a specific note template job using its unique identifier. This endpoint returns the current status of the job and any available results, supporting both generation and refinement jobs.
 
 ## Path Parameters
 
 <ParamField path="id" type="string" required>
-  The unique identifier of the note template generation job to retrieve
+  The unique identifier of the note template job to retrieve
 </ParamField>
 
 ## Response
 
 <ResponseField name="data" type="object">
-  The note template generation job object with current status and results
+  The note template job object with current status and results
   
   <Expandable title="Note Template Job Object">
     <ResponseField name="id" type="string">
-      Unique identifier for the template generation job
+      Unique identifier for the template job
+    </ResponseField>
+    
+    <ResponseField name="mode" type="string">
+      The operation mode for this job
+      - `generation`: Creating a template from provider notes
+      - `refinement`: Improving an existing template
     </ResponseField>
     
     <ResponseField name="status" type="string">
-      Current status of the generation job
+      Current status of the job
       - `pending`: Job is queued for processing
-      - `processing`: Currently analyzing notes and generating template
-      - `completed`: Template generation complete, results available
+      - `processing`: Currently processing the request
+      - `completed`: Processing complete, results available
       - `failed`: Processing failed
     </ResponseField>
     
@@ -40,14 +46,14 @@ Retrieve the details and results of a specific note template generation job usin
       Timestamp when the job was last updated (ISO 8601 format)
     </ResponseField>
     
-    <ResponseField name="error" type="string" optional>
-      Error message if the job failed
-    </ResponseField>
-    
     <ResponseField name="result" type="object" optional>
-      Available when status is "completed"
+      Available when status is "completed" - format depends on mode
       
-      <Expandable title="Template Result Object">
+      <Expandable title="Generation Result (type: 'generation')">
+        <ResponseField name="type" type="string">
+          Set to "generation" for generation jobs
+        </ResponseField>
+        
         <ResponseField name="template" type="object" optional>
           The generated note template
           
@@ -137,11 +143,93 @@ Retrieve the details and results of a specific note template generation job usin
             </ResponseField>
           </Expandable>
         </ResponseField>
+      </Expandable>
+      
+      <Expandable title="Refinement Result (type: 'refinement')">
+        <ResponseField name="type" type="string">
+          Set to "refinement" for refinement jobs
+        </ResponseField>
         
-        <ResponseField name="error" type="string" optional>
-          Error message if template generation failed
+        <ResponseField name="refined_template" type="object" optional>
+          The refined note template
+          
+          <Expandable title="Refined Template Object">
+            <ResponseField name="id" type="string">
+              Unique identifier for the refined template
+            </ResponseField>
+            
+            <ResponseField name="title" type="string">
+              Title for the refined template
+            </ResponseField>
+            
+            <ResponseField name="globalPrompt" type="string" optional>
+              Global prompt/instructions for the refined template
+            </ResponseField>
+            
+            <ResponseField name="sections" type="array">
+              Array of refined template sections
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+        
+        <ResponseField name="refinement_analysis" type="object" optional>
+          Analysis of what changed during refinement
+          
+          <Expandable title="Refinement Analysis">
+            <ResponseField name="changes_applied" type="array">
+              List of changes applied to the template
+              
+              <Expandable title="Change Object">
+                <ResponseField name="section_id" type="string" optional>
+                  ID of the section that was changed (null for global changes)
+                </ResponseField>
+                
+                <ResponseField name="section_name" type="string">
+                  Name of the section that was changed
+                </ResponseField>
+                
+                <ResponseField name="change_type" type="string">
+                  Type of change applied
+                </ResponseField>
+                
+                <ResponseField name="description" type="string">
+                  Description of what was changed
+                </ResponseField>
+                
+                <ResponseField name="reasoning" type="string">
+                  Why this change was made
+                </ResponseField>
+              </Expandable>
+            </ResponseField>
+            
+            <ResponseField name="note_comparison_insights" type="object" optional>
+              Insights from before/after note analysis (if provided)
+            </ResponseField>
+            
+            <ResponseField name="quality_metrics" type="object" optional>
+              Quality metrics for the refinement
+              
+              <Expandable title="Quality Metrics">
+                <ResponseField name="prompt_specificity" type="number">
+                  Specificity score (0-1) for template prompts
+                </ResponseField>
+                
+                <ResponseField name="clinical_accuracy" type="number">
+                  Clinical accuracy score (0-1)
+                </ResponseField>
+                
+                <ResponseField name="template_consistency" type="number">
+                  Template consistency score (0-1)
+                </ResponseField>
+              </Expandable>
+            </ResponseField>
+          </Expandable>
         </ResponseField>
       </Expandable>
+      
+      <ResponseField name="error" type="string" optional>
+        Error message if processing failed
+      </ResponseField>
     </ResponseField>
   </Expandable>
 </ResponseField>
@@ -182,14 +270,16 @@ print(result)
 
 <ResponseExample>
 
-```json 200 OK - Completed Job
+```json 200 OK - Completed Generation Job
 {
   "data": {
     "id": "template_abc123def456",
+    "mode": "generation",
     "status": "completed",
     "created_at": "2024-01-15T10:30:00Z",
     "updated_at": "2024-01-15T10:35:00Z",
     "result": {
+      "type": "generation",
       "template": {
         "id": "template_xyz789",
         "title": "Cardiology Consultation Template",
@@ -275,10 +365,81 @@ print(result)
 }
 ```
 
+```json 200 OK - Completed Refinement Job
+{
+  "data": {
+    "id": "template_xyz789ghi012",
+    "mode": "refinement",
+    "status": "completed",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:37:00Z",
+    "result": {
+      "type": "refinement",
+      "refined_template": {
+        "id": "refined-template-xyz789",
+        "title": "Enhanced Cardiology Consultation Template",
+        "globalPrompt": "Create a comprehensive cardiology consultation note with enhanced assessment detail and differential diagnosis.",
+        "sections": [
+          {
+            "id": "chief_complaint",
+            "title": "Chief Complaint",
+            "type": "text",
+            "prompt": "Document the patient's primary concern in their own words, including severity (1-10) and duration."
+          },
+          {
+            "id": "assessment",
+            "title": "Assessment",
+            "type": "text",
+            "prompt": "Provide clinical impression with severity scoring, differential diagnosis (minimum 3 options), and risk stratification."
+          },
+          {
+            "id": "plan",
+            "title": "Plan",
+            "type": "list",
+            "prompt": "Structure plan with categories: Diagnostics, Medications, Follow-up. Include specific timeframes."
+          }
+        ]
+      },
+      "refinement_analysis": {
+        "changes_applied": [
+          {
+            "section_id": "chief_complaint",
+            "section_name": "Chief Complaint",
+            "change_type": "prompt_refined",
+            "description": "Added severity scoring and duration requirements",
+            "reasoning": "To capture more specific patient presentation details"
+          },
+          {
+            "section_id": "assessment",
+            "section_name": "Assessment", 
+            "change_type": "prompt_refined",
+            "description": "Added differential diagnosis requirements and risk stratification",
+            "reasoning": "To improve clinical decision-making documentation"
+          },
+          {
+            "section_id": "plan",
+            "section_name": "Plan",
+            "change_type": "property_modified",
+            "description": "Changed from paragraph to structured list with categories",
+            "reasoning": "For better organization and readability"
+          }
+        ],
+        "quality_metrics": {
+          "prompt_specificity": 0.92,
+          "clinical_accuracy": 0.95,
+          "template_consistency": 0.88
+        }
+      }
+    }
+  }
+}
+```
+
 ```json 200 OK - Pending Job
 {
   "data": {
     "id": "template_abc123def456",
+    "mode": "generation",
     "status": "pending",
     "created_at": "2024-01-15T10:30:00Z",
     "updated_at": "2024-01-15T10:30:00Z"
@@ -290,10 +451,13 @@ print(result)
 {
   "data": {
     "id": "template_abc123def456",
+    "mode": "generation",
     "status": "failed",
     "created_at": "2024-01-15T10:30:00Z",
     "updated_at": "2024-01-15T10:35:00Z",
-    "error": "Unable to identify consistent patterns in the provided notes. Please ensure notes follow a similar structure and format."
+    "result": {
+      "error": "Unable to identify consistent patterns in the provided notes. Please ensure notes follow a similar structure and format."
+    }
   }
 }
 ```
@@ -303,7 +467,7 @@ print(result)
 ## Status Codes
 
 <ResponseField name="200" type="OK">
-  Note template generation job retrieved successfully
+  Note template job retrieved successfully
 </ResponseField>
 
 <ResponseField name="401" type="Unauthorized">
@@ -311,7 +475,7 @@ print(result)
 </ResponseField>
 
 <ResponseField name="404" type="Not Found">
-  Note template generation job with the specified ID was not found
+  Note template job with the specified ID was not found
 </ResponseField>
 
 <ResponseField name="500" type="Internal Server Error">
@@ -320,7 +484,7 @@ print(result)
 
 ## Polling for Results
 
-Since note template generation is processed asynchronously, you may need to poll this endpoint periodically to check for completion:
+Since note template jobs are processed asynchronously, you may need to poll this endpoint periodically to check for completion:
 
 ```javascript
 async function waitForTemplate(jobId) {
@@ -339,7 +503,7 @@ async function waitForTemplate(jobId) {
     }
     
     if (status === 'failed') {
-      throw new Error(`Template generation failed: ${data.data.error}`);
+      throw new Error(`Template job failed: ${data.data.result?.error || data.data.error || 'Unknown error'}`);
     }
     
     // Wait 10 seconds before polling again
@@ -362,11 +526,21 @@ The insights provide valuable information about your documentation patterns:
 - **Style Analysis**: Your writing tone and detail preferences
 - **Statistics**: Quantitative analysis of your notes
 
-### Using the Template
-Once generated, you can:
+### Using the Results
+
+**Generation Jobs:**
+Once a template is generated, you can:
 1. Import the template into your documentation system
 2. Customize sections and prompts as needed
 3. Use it as a starting point for similar note types
+4. Analyze the insights to understand your documentation patterns
+
+**Refinement Jobs:**
+Once a template is refined, you can:
+1. Replace your existing template with the refined version
+2. Review the refinement analysis to understand what changed
+3. Use the quality metrics to assess improvement
+4. Further refine if needed based on the analysis
 
 ## Webhook Integration
 
@@ -375,14 +549,21 @@ For production use, consider setting up webhooks instead of polling:
 ```javascript
 // Webhook handler example
 app.post('/webhook/note-template', (req, res) => {
-  const { jobId, status, result } = req.body;
+  const { id, mode, status, result } = req.body.data;
   
   if (status === 'completed') {
-    // Process the completed template
-    console.log('Template ready:', result.template);
+    if (mode === 'generation') {
+      // Process the completed generation
+      console.log('Template generated:', result.template);
+      console.log('Analysis insights:', result.insights);
+    } else if (mode === 'refinement') {
+      // Process the completed refinement
+      console.log('Template refined:', result.refined_template);
+      console.log('Changes applied:', result.refinement_analysis.changes_applied);
+    }
   } else if (status === 'failed') {
     // Handle the error
-    console.error('Template generation failed:', req.body.error);
+    console.error('Template job failed:', result?.error || 'Unknown error');
   }
   
   res.status(200).send('OK');
@@ -391,5 +572,5 @@ app.post('/webhook/note-template', (req, res) => {
 
 ## Related Endpoints
 
-- [Create Note Template](/api-reference-alpha/note-templates/create) - Create a new template generation job
-- [Delete Note Template](/api-reference-alpha/note-templates/delete) - Delete a template generation job
+- [Create Note Template](/api-reference-alpha/note-templates/create) - Create a new template job
+- [Delete Note Template](/api-reference-alpha/note-templates/delete) - Delete a template job
