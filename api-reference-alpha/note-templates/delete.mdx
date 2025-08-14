@@ -1,21 +1,21 @@
 ---
-title: "Delete Note Template"
+title: "Delete Note Template Job"
 api: "DELETE /alpha/note-templates/{id}"
-description: "Delete a note template generation job by its unique identifier."
+description: "Delete a note template job (generation or refinement) by its unique identifier."
 ---
 
 ## Overview
 
-Permanently delete a note template generation job and all associated data. This action cannot be undone.
+Permanently delete a note template job and all associated data. This action cannot be undone and works for both generation and refinement jobs.
 
 <Warning>
-  **This action is irreversible**. Once a template generation job is deleted, it cannot be recovered. Make sure you have saved any important results before deletion.
+  **This action is irreversible**. Once a template job is deleted, it cannot be recovered. Make sure you have saved any important results before deletion.
 </Warning>
 
 ## Path Parameters
 
 <ParamField path="id" type="string" required>
-  The unique identifier of the note template generation job to delete
+  The unique identifier of the note template job to delete
 </ParamField>
 
 ## Response
@@ -73,7 +73,7 @@ else:
 ## Status Codes
 
 <ResponseField name="204" type="No Content">
-  Note template generation job deleted successfully
+  Note template job deleted successfully
 </ResponseField>
 
 <ResponseField name="401" type="Unauthorized">
@@ -81,7 +81,7 @@ else:
 </ResponseField>
 
 <ResponseField name="404" type="Not Found">
-  Note template generation job with the specified ID was not found or was already deleted
+  Note template job with the specified ID was not found or was already deleted
 </ResponseField>
 
 <ResponseField name="500" type="Internal Server Error">
@@ -92,7 +92,7 @@ else:
 
 ### Cleanup Completed Jobs
 
-Delete old template generation jobs that are no longer needed:
+Delete old template jobs that are no longer needed:
 
 ```javascript
 async function cleanupOldTemplateJobs() {
@@ -121,7 +121,7 @@ async function cleanupOldTemplateJobs() {
 
 ### Cancel Processing Jobs
 
-Remove jobs that are no longer needed while they're still processing:
+Remove jobs that are no longer needed while they're still processing (works for both generation and refinement jobs):
 
 ```javascript
 async function cancelTemplateJob(jobId) {
@@ -140,7 +140,7 @@ async function cancelTemplateJob(jobId) {
       });
       
       if (deleteResponse.ok) {
-        console.log('Template generation job cancelled successfully');
+        console.log('Template job cancelled successfully');
       } else {
         console.error('Failed to cancel job');
       }
@@ -193,18 +193,18 @@ deleteMultipleJobs(jobsToDelete);
 
 ## Important Notes
 
-1. **Irreversible Action**: Deleted template generation jobs cannot be recovered
-2. **Results Loss**: Any generated templates and analysis insights will be permanently lost
-3. **Processing Jobs**: You can delete jobs even while they're processing
+1. **Irreversible Action**: Deleted template jobs cannot be recovered
+2. **Results Loss**: Any generated/refined templates and analysis insights will be permanently lost
+3. **Processing Jobs**: You can delete jobs even while they're processing (both generation and refinement)
 4. **Billing**: You may still be charged for processing time even if you delete the job before completion
 5. **No Cascading**: Deleting a job does not affect any templates you may have already exported or saved elsewhere
 
 ## Data Privacy
 
-When you delete a note template generation job:
-- All uploaded provider notes are permanently removed
-- Generated templates and insights are deleted
-- Analysis data and intermediate processing results are purged
+When you delete a note template job:
+- **Generation Jobs**: All uploaded provider notes, generated templates, and insights are permanently removed
+- **Refinement Jobs**: Original templates, refined templates, and refinement analysis are permanently removed
+- All analysis data and intermediate processing results are purged
 - No trace of the job remains in our systems
 
 ## Best Practices
@@ -221,5 +221,5 @@ When you delete a note template generation job:
 
 ## Related Endpoints
 
-- [Create Note Template](/api-reference-alpha/note-templates/create) - Create a new template generation job
-- [Get Note Template](/api-reference-alpha/note-templates/get) - Retrieve a template generation job
+- [Create Note Template](/api-reference-alpha/note-templates/create) - Create a new template job
+- [Get Note Template](/api-reference-alpha/note-templates/get) - Retrieve a template job
