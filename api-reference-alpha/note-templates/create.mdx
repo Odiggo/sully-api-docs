@@ -83,18 +83,18 @@ The request body varies depending on the operation mode:
       Unique identifier for the template job
     </ResponseField>
     
-    <ResponseField name="mode" type="string">
-      The operation mode for this job
-      - `generation`: Creating a template from provider notes
-      - `refinement`: Improving an existing template
-    </ResponseField>
-    
     <ResponseField name="status" type="string">
       Current status of the job
       - `pending`: Job is queued for processing
       - `processing`: Currently processing the request
       - `completed`: Processing complete, results available
       - `failed`: Processing failed
+    </ResponseField>
+    
+    <ResponseField name="mode" type="string">
+      The operation mode for this job
+      - `generate`: Creating a template from provider notes
+      - `refine`: Improving an existing template
     </ResponseField>
     
     <ResponseField name="created_at" type="string">
@@ -106,103 +106,29 @@ The request body varies depending on the operation mode:
     </ResponseField>
     
     <ResponseField name="result" type="object" optional>
-      Available when status is "completed" - format depends on mode
+      Available when status is "completed" - contains the generated/refined template
       
-      <Expandable title="Generation Result">
-        <ResponseField name="type" type="string">
-          Set to "generation" for generation jobs
-        </ResponseField>
+      <ResponseField name="template" type="object" optional>
+        The generated or refined note template
         
-        <ResponseField name="template" type="object" optional>
-          The generated note template
+        <Expandable title="Template Object">
+          <ResponseField name="id" type="string">
+            Unique identifier for the template
+          </ResponseField>
           
-          <Expandable title="Template Object">
-            <ResponseField name="id" type="string">
-              Unique identifier for the template
-            </ResponseField>
-            
-            <ResponseField name="title" type="string">
-              Generated title for the template
-            </ResponseField>
-            
-            <ResponseField name="globalPrompt" type="string" optional>
-              Global prompt/instructions for the template
-            </ResponseField>
-            
-            <ResponseField name="sections" type="array">
-              Array of template sections
-            </ResponseField>
-          </Expandable>
-        </ResponseField>
-        
-        <ResponseField name="insights" type="object" optional>
-          Analysis insights from the provider notes
+          <ResponseField name="title" type="string">
+            Title for the template
+          </ResponseField>
           
-          <Expandable title="Analysis Insights">
-            <ResponseField name="commonHeadings" type="array">
-              Common headings found across notes
-            </ResponseField>
-            
-            <ResponseField name="commonSections" type="array">
-              Common sections and their patterns
-            </ResponseField>
-            
-            <ResponseField name="styleAnalysis" type="object">
-              Identified tone and style patterns
-            </ResponseField>
-            
-            <ResponseField name="statistics" type="object">
-              Statistical information about the analyzed notes
-            </ResponseField>
-          </Expandable>
-        </ResponseField>
-      </Expandable>
-      
-      <Expandable title="Refinement Result">
-        <ResponseField name="type" type="string">
-          Set to "refinement" for refinement jobs
-        </ResponseField>
-        
-        <ResponseField name="refined_template" type="object" optional>
-          The refined note template
+          <ResponseField name="global_prompt" type="string" optional>
+            Global prompt/instructions for the template
+          </ResponseField>
           
-          <Expandable title="Refined Template Object">
-            <ResponseField name="id" type="string">
-              Unique identifier for the refined template
-            </ResponseField>
-            
-            <ResponseField name="title" type="string">
-              Title for the refined template
-            </ResponseField>
-            
-            <ResponseField name="globalPrompt" type="string" optional>
-              Global prompt/instructions for the refined template
-            </ResponseField>
-            
-            <ResponseField name="sections" type="array">
-              Array of refined template sections
-            </ResponseField>
-          </Expandable>
-        </ResponseField>
-        
-        <ResponseField name="refinement_analysis" type="object" optional>
-          Analysis of what changed during refinement
-          
-          <Expandable title="Refinement Analysis">
-            <ResponseField name="changes_applied" type="array">
-              List of changes applied to the template
-            </ResponseField>
-            
-            <ResponseField name="note_comparison_insights" type="object" optional>
-              Insights from before/after note analysis (if provided)
-            </ResponseField>
-            
-            <ResponseField name="quality_metrics" type="object" optional>
-              Quality metrics for the refinement
-            </ResponseField>
-          </Expandable>
-        </ResponseField>
-      </Expandable>
+          <ResponseField name="sections" type="array">
+            Array of template sections with structure and prompts
+          </ResponseField>
+        </Expandable>
+      </ResponseField>
       
       <ResponseField name="error" type="string" optional>
         Error message if processing failed
@@ -372,7 +298,7 @@ print(result)
 {
   "data": {
     "id": "template_abc123def456",
-    "mode": "generation",
+    "mode": "generate",
     "status": "pending",
     "created_at": "2024-01-15T10:30:00Z",
     "updated_at": "2024-01-15T10:30:00Z"
@@ -384,7 +310,7 @@ print(result)
 {
   "data": {
     "id": "template_xyz789ghi012",
-    "mode": "refinement",
+    "mode": "refine",
     "status": "pending",
     "created_at": "2024-01-15T10:30:00Z",
     "updated_at": "2024-01-15T10:30:00Z"

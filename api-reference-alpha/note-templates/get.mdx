@@ -24,18 +24,18 @@ Retrieve the details and results of a specific note template job using its uniqu
       Unique identifier for the template job
     </ResponseField>
     
-    <ResponseField name="mode" type="string">
-      The operation mode for this job
-      - `generation`: Creating a template from provider notes
-      - `refinement`: Improving an existing template
-    </ResponseField>
-    
     <ResponseField name="status" type="string">
       Current status of the job
       - `pending`: Job is queued for processing
       - `processing`: Currently processing the request
       - `completed`: Processing complete, results available
       - `failed`: Processing failed
+    </ResponseField>
+    
+    <ResponseField name="mode" type="string">
+      The operation mode for this job
+      - `generate`: Creating a template from provider notes
+      - `refine`: Improving an existing template
     </ResponseField>
     
     <ResponseField name="created_at" type="string">
@@ -47,185 +47,29 @@ Retrieve the details and results of a specific note template job using its uniqu
     </ResponseField>
     
     <ResponseField name="result" type="object" optional>
-      Available when status is "completed" - format depends on mode
+      Available when status is "completed" - contains the generated/refined template
       
-      <Expandable title="Generation Result (type: 'generation')">
-        <ResponseField name="type" type="string">
-          Set to "generation" for generation jobs
-        </ResponseField>
+      <ResponseField name="template" type="object" optional>
+        The generated or refined note template
         
-        <ResponseField name="template" type="object" optional>
-          The generated note template
+        <Expandable title="Template Object">
+          <ResponseField name="id" type="string">
+            Unique identifier for the template
+          </ResponseField>
           
-          <Expandable title="Template Object">
-            <ResponseField name="id" type="string">
-              Unique identifier for the template
-            </ResponseField>
-            
-            <ResponseField name="title" type="string">
-              Generated title for the template
-            </ResponseField>
-            
-            <ResponseField name="globalPrompt" type="string" optional>
-              Global prompt/instructions for the template
-            </ResponseField>
-            
-            <ResponseField name="sections" type="array">
-              Array of template sections with structure and prompts
-            </ResponseField>
-          </Expandable>
-        </ResponseField>
-        
-        <ResponseField name="insights" type="object" optional>
-          Analysis insights from the provider notes
+          <ResponseField name="title" type="string">
+            Title for the template
+          </ResponseField>
           
-          <Expandable title="Analysis Insights">
-            <ResponseField name="commonHeadings" type="array">
-              Common headings found across notes
-              
-              <Expandable title="Heading Object">
-                <ResponseField name="text" type="string">
-                  The heading text
-                </ResponseField>
-                
-                <ResponseField name="frequency" type="number">
-                  How often this heading appeared
-                </ResponseField>
-                
-                <ResponseField name="level" type="number">
-                  Heading level (1-6)
-                </ResponseField>
-              </Expandable>
-            </ResponseField>
-            
-            <ResponseField name="commonSections" type="array">
-              Common sections and their patterns
-            </ResponseField>
-            
-            <ResponseField name="styleAnalysis" type="object">
-              Identified tone and style patterns
-              
-              <Expandable title="Style Analysis">
-                <ResponseField name="predominantTone" type="string">
-                  The main tone: formal, casual, technical, friendly, or instructional
-                </ResponseField>
-                
-                <ResponseField name="detailLevel" type="string">
-                  Level of detail: exhaustive, detailed, standard, brief, or minimal
-                </ResponseField>
-                
-                <ResponseField name="commonPhrases" type="array">
-                  Frequently used phrases
-                </ResponseField>
-                
-                <ResponseField name="writingStyle" type="string">
-                  Description of the writing style
-                </ResponseField>
-              </Expandable>
-            </ResponseField>
-            
-            <ResponseField name="statistics" type="object">
-              Statistical information about the analyzed notes
-              
-              <Expandable title="Statistics">
-                <ResponseField name="totalNotes" type="number">
-                  Number of notes analyzed
-                </ResponseField>
-                
-                <ResponseField name="averageNoteLength" type="number">
-                  Average length of notes in characters
-                </ResponseField>
-                
-                <ResponseField name="mostCommonWords" type="array">
-                  Most frequently used words
-                </ResponseField>
-              </Expandable>
-            </ResponseField>
-          </Expandable>
-        </ResponseField>
-      </Expandable>
-      
-      <Expandable title="Refinement Result (type: 'refinement')">
-        <ResponseField name="type" type="string">
-          Set to "refinement" for refinement jobs
-        </ResponseField>
-        
-        <ResponseField name="refined_template" type="object" optional>
-          The refined note template
+          <ResponseField name="global_prompt" type="string" optional>
+            Global prompt/instructions for the template
+          </ResponseField>
           
-          <Expandable title="Refined Template Object">
-            <ResponseField name="id" type="string">
-              Unique identifier for the refined template
-            </ResponseField>
-            
-            <ResponseField name="title" type="string">
-              Title for the refined template
-            </ResponseField>
-            
-            <ResponseField name="globalPrompt" type="string" optional>
-              Global prompt/instructions for the refined template
-            </ResponseField>
-            
-            <ResponseField name="sections" type="array">
-              Array of refined template sections
-            </ResponseField>
-          </Expandable>
-        </ResponseField>
-        
-        <ResponseField name="refinement_analysis" type="object" optional>
-          Analysis of what changed during refinement
-          
-          <Expandable title="Refinement Analysis">
-            <ResponseField name="changes_applied" type="array">
-              List of changes applied to the template
-              
-              <Expandable title="Change Object">
-                <ResponseField name="section_id" type="string" optional>
-                  ID of the section that was changed (null for global changes)
-                </ResponseField>
-                
-                <ResponseField name="section_name" type="string">
-                  Name of the section that was changed
-                </ResponseField>
-                
-                <ResponseField name="change_type" type="string">
-                  Type of change applied
-                </ResponseField>
-                
-                <ResponseField name="description" type="string">
-                  Description of what was changed
-                </ResponseField>
-                
-                <ResponseField name="reasoning" type="string">
-                  Why this change was made
-                </ResponseField>
-              </Expandable>
-            </ResponseField>
-            
-            <ResponseField name="note_comparison_insights" type="object" optional>
-              Insights from before/after note analysis (if provided)
-            </ResponseField>
-            
-            <ResponseField name="quality_metrics" type="object" optional>
-              Quality metrics for the refinement
-              
-              <Expandable title="Quality Metrics">
-                <ResponseField name="prompt_specificity" type="number">
-                  Specificity score (0-1) for template prompts
-                </ResponseField>
-                
-                <ResponseField name="clinical_accuracy" type="number">
-                  Clinical accuracy score (0-1)
-                </ResponseField>
-                
-                <ResponseField name="template_consistency" type="number">
-                  Template consistency score (0-1)
-                </ResponseField>
-              </Expandable>
-            </ResponseField>
-          </Expandable>
-        </ResponseField>
-      </Expandable>
+          <ResponseField name="sections" type="array">
+            Array of template sections with structure and prompts
+          </ResponseField>
+        </Expandable>
+      </ResponseField>
       
       <ResponseField name="error" type="string" optional>
         Error message if processing failed
@@ -274,91 +118,57 @@ print(result)
 {
   "data": {
     "id": "template_abc123def456",
-    "mode": "generation",
+    "mode": "generate",
     "status": "completed",
     "created_at": "2024-01-15T10:30:00Z",
     "updated_at": "2024-01-15T10:35:00Z",
     "result": {
-      "type": "generation",
       "template": {
-        "id": "template_xyz789",
+        "id": "generated-template-xyz789",
         "title": "Cardiology Consultation Template",
-        "globalPrompt": "Create a comprehensive cardiology consultation note following standard clinical documentation practices.",
+        "global_prompt": "Create a comprehensive cardiology consultation note following standard clinical documentation practices.",
         "sections": [
           {
             "id": "chief_complaint",
-            "title": "Chief Complaint",
-            "type": "text",
-            "prompt": "Document the patient's primary concern in their own words."
-          },
-          {
-            "id": "hpi",
-            "title": "History of Present Illness",
-            "type": "text",
-            "prompt": "Provide detailed chronological account of the current illness including onset, duration, character, and associated symptoms."
-          },
-          {
-            "id": "physical_exam",
-            "title": "Physical Examination",
-            "type": "structured",
-            "prompt": "Document vital signs and focused cardiovascular examination findings."
+            "type": "heading",
+            "properties": {
+              "level": 1,
+              "text": "Chief Complaint"
+            },
+            "children": [
+              {
+                "id": "chief_complaint_text",
+                "type": "text",
+                "prompt": "Document the patient's primary concern in their own words.",
+                "properties": {
+                  "formatting_style": "markdown",
+                  "detail_level": "standard",
+                  "tone": "formal"
+                }
+              }
+            ]
           },
           {
             "id": "assessment",
-            "title": "Assessment",
-            "type": "text",
-            "prompt": "Provide clinical impression and differential diagnosis."
-          },
-          {
-            "id": "plan",
-            "title": "Plan",
-            "type": "list",
-            "prompt": "Outline diagnostic tests, treatments, and follow-up recommendations."
+            "type": "heading",
+            "properties": {
+              "level": 1,
+              "text": "Assessment"
+            },
+            "children": [
+              {
+                "id": "assessment_text",
+                "type": "text",
+                "prompt": "Provide clinical impression and differential diagnosis.",
+                "properties": {
+                  "formatting_style": "markdown",
+                  "detail_level": "detailed",
+                  "tone": "technical"
+                }
+              }
+            ]
           }
         ]
-      },
-      "insights": {
-        "commonHeadings": [
-          {
-            "text": "Chief Complaint",
-            "frequency": 2,
-            "level": 1
-          },
-          {
-            "text": "History of Present Illness",
-            "frequency": 2,
-            "level": 1
-          },
-          {
-            "text": "Physical Exam",
-            "frequency": 2,
-            "level": 1
-          }
-        ],
-        "styleAnalysis": {
-          "predominantTone": "formal",
-          "detailLevel": "detailed",
-          "commonPhrases": [
-            "presents with",
-            "vital signs stable",
-            "follow-up in"
-          ],
-          "writingStyle": "Structured clinical documentation with systematic approach to patient assessment"
-        },
-        "statistics": {
-          "totalNotes": 2,
-          "averageNoteLength": 245,
-          "mostCommonWords": [
-            {
-              "word": "patient",
-              "count": 4
-            },
-            {
-              "word": "chest",
-              "count": 3
-            }
-          ]
-        }
       }
     }
   }
@@ -369,66 +179,57 @@ print(result)
 {
   "data": {
     "id": "template_xyz789ghi012",
-    "mode": "refinement",
     "status": "completed",
+    "mode": "refine",
     "created_at": "2024-01-15T10:30:00Z",
     "updated_at": "2024-01-15T10:37:00Z",
     "result": {
-      "type": "refinement",
-      "refined_template": {
+      "template": {
         "id": "refined-template-xyz789",
         "title": "Enhanced Cardiology Consultation Template",
-        "globalPrompt": "Create a comprehensive cardiology consultation note with enhanced assessment detail and differential diagnosis.",
+        "global_prompt": "Create a comprehensive cardiology consultation note with enhanced assessment detail and differential diagnosis.",
         "sections": [
           {
             "id": "chief_complaint",
-            "title": "Chief Complaint",
-            "type": "text",
-            "prompt": "Document the patient's primary concern in their own words, including severity (1-10) and duration."
+            "type": "heading",
+            "properties": {
+              "level": 1,
+              "text": "Chief Complaint"
+            },
+            "children": [
+              {
+                "id": "chief_complaint_text",
+                "type": "text",
+                "prompt": "Document the patient's primary concern in their own words, including severity (1-10) and duration.",
+                "properties": {
+                  "formatting_style": "markdown",
+                  "detail_level": "detailed",
+                  "tone": "formal"
+                }
+              }
+            ]
           },
           {
             "id": "assessment",
-            "title": "Assessment",
-            "type": "text",
-            "prompt": "Provide clinical impression with severity scoring, differential diagnosis (minimum 3 options), and risk stratification."
-          },
-          {
-            "id": "plan",
-            "title": "Plan",
-            "type": "list",
-            "prompt": "Structure plan with categories: Diagnostics, Medications, Follow-up. Include specific timeframes."
+            "type": "heading",
+            "properties": {
+              "level": 1,
+              "text": "Assessment"
+            },
+            "children": [
+              {
+                "id": "assessment_text",
+                "type": "text",
+                "prompt": "Provide clinical impression with severity scoring, differential diagnosis (minimum 3 options), and risk stratification.",
+                "properties": {
+                  "formatting_style": "markdown",
+                  "detail_level": "detailed",
+                  "tone": "technical"
+                }
+              }
+            ]
           }
         ]
-      },
-      "refinement_analysis": {
-        "changes_applied": [
-          {
-            "section_id": "chief_complaint",
-            "section_name": "Chief Complaint",
-            "change_type": "prompt_refined",
-            "description": "Added severity scoring and duration requirements",
-            "reasoning": "To capture more specific patient presentation details"
-          },
-          {
-            "section_id": "assessment",
-            "section_name": "Assessment", 
-            "change_type": "prompt_refined",
-            "description": "Added differential diagnosis requirements and risk stratification",
-            "reasoning": "To improve clinical decision-making documentation"
-          },
-          {
-            "section_id": "plan",
-            "section_name": "Plan",
-            "change_type": "property_modified",
-            "description": "Changed from paragraph to structured list with categories",
-            "reasoning": "For better organization and readability"
-          }
-        ],
-        "quality_metrics": {
-          "prompt_specificity": 0.92,
-          "clinical_accuracy": 0.95,
-          "template_consistency": 0.88
-        }
       }
     }
   }
@@ -439,8 +240,8 @@ print(result)
 {
   "data": {
     "id": "template_abc123def456",
-    "mode": "generation",
     "status": "pending",
+    "mode": "generate",
     "created_at": "2024-01-15T10:30:00Z",
     "updated_at": "2024-01-15T10:30:00Z"
   }
@@ -451,12 +252,12 @@ print(result)
 {
   "data": {
     "id": "template_abc123def456",
-    "mode": "generation",
     "status": "failed",
+    "mode": "generate",
     "created_at": "2024-01-15T10:30:00Z",
     "updated_at": "2024-01-15T10:35:00Z",
     "result": {
-      "error": "Unable to identify consistent patterns in the provided notes. Please ensure notes follow a similar structure and format."
+      "error": "Failed to generate note template"
     }
   }
 }
