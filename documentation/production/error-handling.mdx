@@ -1,0 +1,648 @@
+---
+title: 'Error Handling'
+description: 'Build resilient integrations that handle failures gracefully'
+---
+
+Production integrations must handle errors gracefully to provide a reliable experience. Network issues, rate limits, and temporary server problems are inevitable - your integration should recover from them automatically when possible and fail gracefully when not.
+
+## Overview
+
+### Why Error Handling Matters
+
+Robust error handling ensures your integration:
+
+- **Stays reliable** - Automatically recovers from transient failures
+- **Protects data** - Prevents data loss during network interruptions
+- **Provides visibility** - Gives clear feedback when issues occur
+- **Scales gracefully** - Handles rate limits without cascading failures
+
+<Tip>
+The Sully.ai SDKs include built-in retry logic for transient errors. This guide covers the underlying concepts and how to customize behavior for production use cases.
+</Tip>
+
+## Error Response Format
+
+All Sully.ai API errors follow a consistent structure:
+
+```json
+{
+  "error": {
+    "message": "The requested resource was not found",
+    "code": "resource_not_found",
+    "type": "invalid_request_error"
+  }
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `message` | Human-readable error description |
+| `code` | Machine-readable error code for programmatic handling |
+| `type` | Error category (e.g., `invalid_request_error`, `authentication_error`, `rate_limit_error`) |
+
+The HTTP response also includes the appropriate status code in the response header.
+
+## HTTP Status Codes
+
+| Code | Meaning | Action |
+|------|---------|--------|
+| **400** | Bad Request - Invalid input parameters | Fix the request, do not retry |
+| **401** | Unauthorized - Invalid or missing API key | Check credentials, do not retry |
+| **403** | Forbidden - Not allowed to access resource | Check permissions or account status |
+| **404** | Not Found - Resource does not exist | Verify the resource ID |
+| **429** | Too Many Requests - Rate limited | Retry with exponential backoff |
+| **500** | Internal Server Error - Server-side issue | Retry with exponential backoff |
+| **502** | Bad Gateway - Upstream service issue | Retry with exponential backoff |
+| **503** | Service Unavailable - Temporary overload | Retry with exponential backoff |
+| **504** | Gateway Timeout - Request took too long | Retry with exponential backoff |
+
+## Transient vs Permanent Errors
+
+Understanding which errors are transient (temporary) versus permanent is critical for implementing proper retry logic.
+
+### Transient Errors (Retry)
+
+These errors are temporary and may succeed if retried:
+
+- **429** - Rate limited, will succeed after backoff
+- **500** - Server error, often recovers quickly
+- **502/503/504** - Gateway or availability issues
+- **Network errors** - Connection timeouts, DNS failures
+
+### Permanent Errors (Do Not Retry)
+
+These errors indicate a problem with the request itself:
+
+- **400** - Bad request parameters
+- **401** - Invalid credentials
+- **403** - Permission denied
+- **404** - Resource not found
+
+<CodeGroup>
+```typescript TypeScript
+function isTransientError(statusCode: number): boolean {
+  const transientCodes = [429, 500, 502, 503, 504];
+  return transientCodes.includes(statusCode);
+}
+
+function isNetworkError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const networkErrors = [
+      'ECONNRESET',
+      'ECONNREFUSED',
+      'ETIMEDOUT',
+      'ENOTFOUND',
+      'EAI_AGAIN',
+    ];
+    return networkErrors.some((code) => error.message.includes(code));
+  }
+  return false;
+}
+
+function shouldRetry(error: unknown): boolean {
+  // Network errors are always transient
+  if (isNetworkError(error)) {
+    return true;
+  }
+
+  // Check HTTP status code
+  if (error instanceof APIError) {
+    return isTransientError(error.status);
+  }
+
+  return false;
+}
+```
+
+```python Python
+def is_transient_error(status_code: int) -> bool:
+    transient_codes = {429, 500, 502, 503, 504}
+    return status_code in transient_codes
+
+
+def is_network_error(error: Exception) -> bool:
+    network_errors = [
+        "ConnectionError",
+        "Timeout",
+        "ConnectionRefused",
+        "ConnectionReset",
+    ]
+    error_str = str(type(error).__name__)
+    return any(net_err in error_str for net_err in network_errors)
+
+
+def should_retry(error: Exception) -> bool:
+    # Network errors are always transient
+    if is_network_error(error):
+        return True
+
+    # Check HTTP status code
+    if hasattr(error, "status_code"):
+        return is_transient_error(error.status_code)
+
+    return False
+```
+</CodeGroup>
+
+## Retry Strategies
+
+### Exponential Backoff with Jitter
+
+The recommended retry strategy uses exponential backoff with random jitter to prevent thundering herd problems:
+
+```
+delay = min(maxDelay, baseDelay * 2^attempt) + random(0, jitter)
+```
+
+- **Base delay**: Starting wait time (e.g., 1000ms)
+- **Max delay**: Maximum wait time cap (e.g., 30000ms)
+- **Jitter**: Random variation to spread out retries (e.g., 0-25% of delay)
+
+### Complete Retry Wrapper
+
+<CodeGroup>
+```typescript TypeScript
+interface RetryConfig {
+  maxAttempts: number;
+  baseDelayMs: number;
+  maxDelayMs: number;
+  jitterFraction: number;
+}
+
+const defaultRetryConfig: RetryConfig = {
+  maxAttempts: 3,
+  baseDelayMs: 1000,
+  maxDelayMs: 30000,
+  jitterFraction: 0.25,
+};
+
+function calculateDelay(attempt: number, config: RetryConfig): number {
+  const exponentialDelay = config.baseDelayMs * Math.pow(2, attempt);
+  const cappedDelay = Math.min(exponentialDelay, config.maxDelayMs);
+  const jitter = cappedDelay * Math.random() * config.jitterFraction;
+  return Math.floor(cappedDelay + jitter);
+}
+
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  config: Partial<RetryConfig> = {}
+): Promise<T> {
+  const finalConfig = { ...defaultRetryConfig, ...config };
+  let lastError: Error | undefined;
+
+  for (let attempt = 0; attempt < finalConfig.maxAttempts; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // Don't retry permanent errors
+      if (!shouldRetry(error)) {
+        throw error;
+      }
+
+      // Don't wait after the last attempt
+      if (attempt < finalConfig.maxAttempts - 1) {
+        const delay = calculateDelay(attempt, finalConfig);
+        console.log(`Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError ?? new Error('All retry attempts failed');
+}
+
+// Usage
+const note = await withRetry(
+  () => client.notes.retrieve(noteId),
+  { maxAttempts: 5 }
+);
+```
+
+```python Python
+import random
+import asyncio
+from dataclasses import dataclass
+from typing import TypeVar, Callable, Awaitable
+
+T = TypeVar("T")
+
+
+@dataclass
+class RetryConfig:
+    max_attempts: int = 3
+    base_delay_ms: int = 1000
+    max_delay_ms: int = 30000
+    jitter_fraction: float = 0.25
+
+
+def calculate_delay(attempt: int, config: RetryConfig) -> int:
+    exponential_delay = config.base_delay_ms * (2 ** attempt)
+    capped_delay = min(exponential_delay, config.max_delay_ms)
+    jitter = capped_delay * random.random() * config.jitter_fraction
+    return int(capped_delay + jitter)
+
+
+async def with_retry(
+    operation: Callable[[], Awaitable[T]],
+    config: RetryConfig | None = None,
+) -> T:
+    config = config or RetryConfig()
+    last_error: Exception | None = None
+
+    for attempt in range(config.max_attempts):
+        try:
+            return await operation()
+        except Exception as error:
+            last_error = error
+
+            # Don't retry permanent errors
+            if not should_retry(error):
+                raise
+
+            # Don't wait after the last attempt
+            if attempt < config.max_attempts - 1:
+                delay = calculate_delay(attempt, config)
+                print(f"Attempt {attempt + 1} failed, retrying in {delay}ms...")
+                await asyncio.sleep(delay / 1000)
+
+    raise last_error or Exception("All retry attempts failed")
+
+
+# Synchronous version
+def with_retry_sync(
+    operation: Callable[[], T],
+    config: RetryConfig | None = None,
+) -> T:
+    import time
+
+    config = config or RetryConfig()
+    last_error: Exception | None = None
+
+    for attempt in range(config.max_attempts):
+        try:
+            return operation()
+        except Exception as error:
+            last_error = error
+
+            if not should_retry(error):
+                raise
+
+            if attempt < config.max_attempts - 1:
+                delay = calculate_delay(attempt, config)
+                print(f"Attempt {attempt + 1} failed, retrying in {delay}ms...")
+                time.sleep(delay / 1000)
+
+    raise last_error or Exception("All retry attempts failed")
+
+
+# Usage
+note = with_retry_sync(
+    lambda: client.notes.retrieve(note_id),
+    RetryConfig(max_attempts=5)
+)
+```
+</CodeGroup>
+
+### When to Give Up
+
+Set reasonable limits to avoid infinite retry loops:
+
+- **Max attempts**: 3-5 attempts for most operations
+- **Max total time**: Cap total retry time (e.g., 2 minutes)
+- **Circuit breaker**: After repeated failures, stop retrying temporarily
+
+<Warning>
+Never retry indefinitely. Set a maximum number of attempts and handle the final failure gracefully - log the error, notify the user, or queue for manual review.
+</Warning>
+
+## SDK Error Handling
+
+The Sully.ai SDKs provide specific error classes for different failure scenarios, making it easy to handle errors appropriately.
+
+### TypeScript SDK
+
+```typescript
+import SullyAI, {
+  APIError,
+  AuthenticationError,
+  RateLimitError,
+  BadRequestError,
+  NotFoundError,
+} from '@sullyai/sullyai';
+
+const client = new SullyAI();
+
+async function createNoteWithErrorHandling(transcript: string): Promise<void> {
+  try {
+    const note = await client.notes.create({
+      transcript,
+      noteType: { type: 'soap' },
+    });
+    console.log('Note created:', note.noteId);
+  } catch (error) {
+    if (error instanceof AuthenticationError) {
+      // Invalid API key or account ID - check configuration
+      console.error('Authentication failed. Check your API credentials.');
+      // Don't retry - fix credentials first
+    } else if (error instanceof RateLimitError) {
+      // Too many requests - SDK handles retries automatically
+      // For manual handling:
+      console.error(`Rate limited. Retry after: ${error.retryAfter}s`);
+    } else if (error instanceof BadRequestError) {
+      // Invalid request - log and fix the request
+      console.error('Invalid request:', error.message);
+      // Don't retry - fix the request parameters
+    } else if (error instanceof NotFoundError) {
+      // Resource doesn't exist
+      console.error('Resource not found:', error.message);
+    } else if (error instanceof APIError) {
+      // Other API errors - check if transient
+      console.error(`API error (${error.status}):`, error.message);
+      console.error('Request ID:', error.requestId); // Useful for support
+    } else {
+      // Unknown error
+      throw error;
+    }
+  }
+}
+```
+
+### Python SDK
+
+```python
+from sullyai import SullyAI
+from sullyai.errors import (
+    APIError,
+    AuthenticationError,
+    RateLimitError,
+    BadRequestError,
+    NotFoundError,
+    APIConnectionError,
+)
+
+client = SullyAI()
+
+
+def create_note_with_error_handling(transcript: str) -> None:
+    try:
+        note = client.notes.create(
+            transcript=transcript,
+            note_type={"type": "soap"},
+        )
+        print(f"Note created: {note.note_id}")
+    except AuthenticationError:
+        # Invalid API key or account ID - check configuration
+        print("Authentication failed. Check your API credentials.")
+        # Don't retry - fix credentials first
+    except RateLimitError as e:
+        # Too many requests - SDK handles retries automatically
+        # For manual handling:
+        print(f"Rate limited. Retry after: {e.retry_after}s")
+    except BadRequestError as e:
+        # Invalid request - log and fix the request
+        print(f"Invalid request: {e.message}")
+        # Don't retry - fix the request parameters
+    except NotFoundError as e:
+        # Resource doesn't exist
+        print(f"Resource not found: {e.message}")
+    except APIConnectionError:
+        # Network issue - may be transient
+        print("Failed to connect to API. Check network connection.")
+    except APIError as e:
+        # Other API errors
+        print(f"API error ({e.status_code}): {e.message}")
+```
+
+### Error Properties
+
+SDK errors include helpful properties for debugging and logging:
+
+| Property | Description |
+|----------|-------------|
+| `status` / `status_code` | HTTP status code |
+| `message` | Human-readable error description |
+| `requestId` / `request_id` | Unique request ID for support inquiries |
+| `retryAfter` / `retry_after` | Seconds to wait before retrying (rate limits) |
+
+## WebSocket Error Recovery
+
+Real-time streaming connections require special error handling for connection drops, token expiration, and state recovery.
+
+### Connection Drops
+
+WebSocket connections can drop unexpectedly due to network issues. Implement automatic reconnection:
+
+```typescript
+class StreamConnection {
+  private reconnectAttempt = 0;
+  private readonly maxReconnectAttempts = 5;
+
+  private async handleDisconnect(event: CloseEvent): Promise<void> {
+    // Normal closure - don't reconnect
+    if (event.code === 1000) {
+      return;
+    }
+
+    // Unexpected disconnect - attempt reconnection
+    if (this.reconnectAttempt < this.maxReconnectAttempts) {
+      const delay = this.calculateBackoff();
+      console.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempt + 1})`);
+
+      await this.sleep(delay);
+      this.reconnectAttempt++;
+      await this.connect();
+    } else {
+      console.error('Max reconnection attempts reached');
+      this.emit('error', new Error('Connection failed after max retries'));
+    }
+  }
+}
+```
+
+### Token Expiration
+
+Streaming tokens have limited validity. Handle expiration gracefully:
+
+```typescript
+ws.onclose = async (event) => {
+  // 401 close code indicates token expiration
+  if (event.code === 4001 || event.reason.includes('token')) {
+    console.log('Token expired, fetching new token...');
+
+    // Get fresh token before reconnecting
+    const newToken = await fetchStreamingToken();
+    await this.connectWithToken(newToken);
+  } else {
+    await this.handleDisconnect(event);
+  }
+};
+```
+
+### State Recovery After Reconnection
+
+Buffer audio during reconnection to prevent data loss:
+
+```typescript
+private audioBuffer: string[] = [];
+
+sendAudio(audioData: ArrayBuffer): void {
+  const base64Audio = this.toBase64(audioData);
+
+  if (this.isConnected()) {
+    this.ws.send(JSON.stringify({ audio: base64Audio }));
+  } else if (this.isReconnecting()) {
+    // Buffer audio during reconnection
+    this.audioBuffer.push(base64Audio);
+  }
+}
+
+private async onReconnected(): Promise<void> {
+  // Flush buffered audio after reconnection
+  for (const audio of this.audioBuffer) {
+    this.ws.send(JSON.stringify({ audio }));
+  }
+  this.audioBuffer = [];
+}
+```
+
+<Note>
+For complete WebSocket error handling implementation, see the [Audio Transcription guide](/documentation/guides/transcription#production-streaming).
+</Note>
+
+## Timeout Handling
+
+### Setting Appropriate Timeouts
+
+Configure timeouts based on operation type:
+
+| Operation | Recommended Timeout |
+|-----------|---------------------|
+| Simple API calls | 30 seconds |
+| File uploads (small) | 60 seconds |
+| File uploads (large) | 120+ seconds |
+| WebSocket connection | 10 seconds |
+
+<CodeGroup>
+```typescript TypeScript
+import SullyAI from '@sullyai/sullyai';
+import * as fs from 'fs';
+
+// Default client timeout
+const client = new SullyAI({
+  timeout: 60000, // 60 seconds
+});
+
+// Per-request timeout for large files
+const transcription = await client.audio.transcriptions.create(
+  { audio: fs.createReadStream('large-recording.mp3') },
+  { timeout: 180000 } // 3 minutes for large files
+);
+```
+
+```python Python
+from sullyai import SullyAI
+
+# Default client timeout
+client = SullyAI(timeout=60.0)  # 60 seconds
+
+# Per-request timeout for large files
+transcription = client.audio.transcriptions.create(
+    audio=open("large-recording.mp3", "rb"),
+    timeout=180.0  # 3 minutes for large files
+)
+```
+</CodeGroup>
+
+### Handling Timeout Errors
+
+Timeout does not mean failure - the operation may still complete on the server:
+
+<CodeGroup>
+```typescript TypeScript
+import SullyAI, { APIError } from '@sullyai/sullyai';
+
+async function uploadWithTimeoutHandling(
+  filePath: string
+): Promise<string> {
+  const client = new SullyAI({ timeout: 60000 });
+
+  try {
+    const transcription = await client.audio.transcriptions.create({
+      audio: fs.createReadStream(filePath),
+    });
+    return transcription.transcriptionId;
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('timeout')) {
+      // Timeout occurred - the upload may have succeeded
+      console.warn('Request timed out. The upload may still be processing.');
+      console.warn('Check your dashboard or implement idempotency keys.');
+
+      // Option 1: Return early and handle async
+      // Option 2: Retry with longer timeout
+      // Option 3: Use webhooks to get notified when complete
+      throw new Error('Upload timed out - check status manually');
+    }
+    throw error;
+  }
+}
+```
+
+```python Python
+from sullyai import SullyAI
+from sullyai.errors import APIConnectionError
+
+def upload_with_timeout_handling(file_path: str) -> str:
+    client = SullyAI(timeout=60.0)
+
+    try:
+        with open(file_path, "rb") as f:
+            transcription = client.audio.transcriptions.create(audio=f)
+        return transcription.transcription_id
+    except APIConnectionError as error:
+        if "timeout" in str(error).lower():
+            # Timeout occurred - the upload may have succeeded
+            print("Request timed out. The upload may still be processing.")
+            print("Check your dashboard or implement idempotency keys.")
+            raise Exception("Upload timed out - check status manually")
+        raise
+```
+</CodeGroup>
+
+<Warning>
+A timeout error does not mean the operation failed. The server may have received and processed the request. Use webhooks or implement idempotency to handle this safely.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Webhooks Guide"
+    icon="bell"
+    href="/documentation/guides/webhooks"
+  >
+    Use webhooks instead of polling for reliable async notifications
+  </Card>
+  <Card
+    title="Audio Transcription"
+    icon="microphone"
+    href="/documentation/guides/transcription"
+  >
+    Production streaming with reconnection and error recovery
+  </Card>
+  <Card
+    title="TypeScript SDK"
+    icon="js"
+    href="/documentation/sdks/typescript"
+  >
+    Built-in error handling and automatic retries
+  </Card>
+  <Card
+    title="Python SDK"
+    icon="python"
+    href="/documentation/sdks/python"
+  >
+    Error classes and retry configuration
+  </Card>
+</CardGroup>
