@@ -1,0 +1,667 @@
+---
+title: 'Context Enrichment'
+description: 'Improve note quality by providing patient context to the Sully.ai API'
+sidebarTitle: 'Context Enrichment'
+---
+
+## Overview
+
+While Sully.ai can generate clinical notes from transcripts alone, providing additional context significantly improves note accuracy and completeness. Context enrichment helps Sully:
+
+- **Personalize notes** with correct patient demographics and pronouns
+- **Reference current medications** in assessments and identify potential interactions
+- **Maintain continuity of care** by understanding previous visits
+- **Follow your preferences** for note structure and emphasis
+- **Incorporate external data** like lab results or specialist recommendations
+
+This guide covers all available context fields and best practices for using them effectively.
+
+---
+
+## Available Context Fields
+
+When creating notes, you can provide the following optional context fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `date` | string | Visit date (ISO format or natural language) |
+| `patientInfo` | object | Patient demographics (name, DOB, gender) |
+| `medicationList` | string[] | Current medications the patient is taking |
+| `previousNote` | string | Previous visit note for continuity of care |
+| `instructions` | string | Specific instructions for note generation |
+| `context` | string | Any additional free-form context |
+
+All fields are optional. Provide what you have available to improve note quality.
+
+---
+
+## Patient Info
+
+The `patientInfo` object provides basic patient demographics that appear in the note header and inform pronoun usage throughout the document.
+
+### Structure
+
+```json
+{
+  "patientInfo": {
+    "name": "Jane Doe",
+    "dateOfBirth": "1985-03-22",
+    "gender": "female"
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Patient's full name |
+| `dateOfBirth` | string | Date of birth (ISO format or natural language) |
+| `gender` | string | Patient's gender (used for pronouns) |
+
+### How It's Used
+
+- **Note header**: Patient name and age derived from DOB appear at the top of the note
+- **Pronoun consistency**: Gender informs pronoun usage (she/her, he/him, they/them)
+- **Age-appropriate language**: Pediatric vs. adult clinical terminology
+
+### Code Example
+
+<CodeGroup>
+```typescript TypeScript
+import Sully from '@sullyai/sullyai';
+
+const sully = new Sully();
+
+const note = await sully.notes.create({
+  transcript: "Doctor: Good morning, what brings you in today?...",
+  noteType: { type: 'soap' },
+  patientInfo: {
+    name: 'Jane Doe',
+    dateOfBirth: '1985-03-22',
+    gender: 'female',
+  },
+});
+```
+
+```python Python
+from sullyai import Sully
+
+sully = Sully()
+
+note = sully.notes.create(
+    transcript="Doctor: Good morning, what brings you in today?...",
+    note_type={"type": "soap"},
+    patient_info={
+        "name": "Jane Doe",
+        "date_of_birth": "1985-03-22",
+        "gender": "female",
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.sully.ai/v1/notes" \
+  -H "X-API-Key: ${SULLY_API_KEY}" \
+  -H "X-Account-Id: ${SULLY_ACCOUNT_ID}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transcript": "Doctor: Good morning, what brings you in today?...",
+    "noteType": { "type": "soap" },
+    "patientInfo": {
+      "name": "Jane Doe",
+      "dateOfBirth": "1985-03-22",
+      "gender": "female"
+    }
+  }'
+```
+</CodeGroup>
+
+---
+
+## Medication List
+
+The `medicationList` field accepts an array of medication strings representing the patient's current medications.
+
+### Format
+
+Provide medications as strings. Include dosage information when available:
+
+```json
+{
+  "medicationList": [
+    "Lisinopril 10mg daily",
+    "Metformin 500mg twice daily",
+    "Atorvastatin 40mg at bedtime",
+    "Aspirin 81mg daily"
+  ]
+}
+```
+
+### How It's Used
+
+- **Medication reconciliation**: Referenced in the Subjective or History section
+- **Assessment context**: Helps identify drug interactions or contraindications
+- **Plan decisions**: Informs medication adjustments or additions
+- **Allergy considerations**: Cross-referenced when new medications are discussed
+
+### Code Example
+
+<CodeGroup>
+```typescript TypeScript
+import Sully from '@sullyai/sullyai';
+
+const sully = new Sully();
+
+const note = await sully.notes.create({
+  transcript: "Doctor: How are you feeling on your blood pressure medication?...",
+  noteType: { type: 'soap' },
+  medicationList: [
+    'Lisinopril 10mg daily',
+    'Metformin 500mg twice daily',
+    'Atorvastatin 40mg at bedtime',
+    'Aspirin 81mg daily',
+  ],
+});
+```
+
+```python Python
+from sullyai import Sully
+
+sully = Sully()
+
+note = sully.notes.create(
+    transcript="Doctor: How are you feeling on your blood pressure medication?...",
+    note_type={"type": "soap"},
+    medication_list=[
+        "Lisinopril 10mg daily",
+        "Metformin 500mg twice daily",
+        "Atorvastatin 40mg at bedtime",
+        "Aspirin 81mg daily",
+    ],
+)
+```
+
+```bash cURL
+curl -X POST "https://api.sully.ai/v1/notes" \
+  -H "X-API-Key: ${SULLY_API_KEY}" \
+  -H "X-Account-Id: ${SULLY_ACCOUNT_ID}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transcript": "Doctor: How are you feeling on your blood pressure medication?...",
+    "noteType": { "type": "soap" },
+    "medicationList": [
+      "Lisinopril 10mg daily",
+      "Metformin 500mg twice daily",
+      "Atorvastatin 40mg at bedtime",
+      "Aspirin 81mg daily"
+    ]
+  }'
+```
+</CodeGroup>
+
+<Tip>
+Include dosage and frequency when available. "Metformin 500mg twice daily" provides more useful context than just "Metformin".
+</Tip>
+
+---
+
+## Previous Notes
+
+The `previousNote` field accepts the text of a previous visit note. This is particularly powerful for follow-up visits where continuity of care is important.
+
+### How It's Used
+
+- **Continuity of care**: References previous diagnoses, treatments, and recommendations
+- **Progress tracking**: Notes improvement or worsening of conditions
+- **Follow-up references**: "Patient returns for follow-up of..." language
+- **Treatment response**: Documents how the patient responded to previous interventions
+
+### Best Use Cases
+
+| Visit Type | Previous Note Value |
+|------------|---------------------|
+| Follow-up visit | Previous visit note for same condition |
+| Post-procedure | Pre-procedure or procedure note |
+| Chronic disease management | Most recent note for that condition |
+| Hospital discharge follow-up | Discharge summary |
+
+### Code Example
+
+<CodeGroup>
+```typescript TypeScript
+import Sully from '@sullyai/sullyai';
+
+const sully = new Sully();
+
+const previousNote = `
+SUBJECTIVE: 45-year-old female presenting with migraine headaches occurring 3-4 times per week.
+Reports throbbing pain, photophobia, and nausea. Current medications ineffective.
+
+ASSESSMENT: Chronic migraine without aura, poorly controlled.
+
+PLAN:
+1. Start sumatriptan 50mg PRN for acute episodes
+2. Begin topiramate 25mg daily for prophylaxis
+3. Headache diary for 4 weeks
+4. Return in 4 weeks to assess response
+`;
+
+const note = await sully.notes.create({
+  transcript: "Doctor: Welcome back. How have the new medications been working for your migraines?...",
+  noteType: { type: 'soap' },
+  previousNote: previousNote,
+});
+```
+
+```python Python
+from sullyai import Sully
+
+sully = Sully()
+
+previous_note = """
+SUBJECTIVE: 45-year-old female presenting with migraine headaches occurring 3-4 times per week.
+Reports throbbing pain, photophobia, and nausea. Current medications ineffective.
+
+ASSESSMENT: Chronic migraine without aura, poorly controlled.
+
+PLAN:
+1. Start sumatriptan 50mg PRN for acute episodes
+2. Begin topiramate 25mg daily for prophylaxis
+3. Headache diary for 4 weeks
+4. Return in 4 weeks to assess response
+"""
+
+note = sully.notes.create(
+    transcript="Doctor: Welcome back. How have the new medications been working for your migraines?...",
+    note_type={"type": "soap"},
+    previous_note=previous_note,
+)
+```
+
+```bash cURL
+curl -X POST "https://api.sully.ai/v1/notes" \
+  -H "X-API-Key: ${SULLY_API_KEY}" \
+  -H "X-Account-Id: ${SULLY_ACCOUNT_ID}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transcript": "Doctor: Welcome back. How have the new medications been working for your migraines?...",
+    "noteType": { "type": "soap" },
+    "previousNote": "SUBJECTIVE: 45-year-old female presenting with migraine headaches occurring 3-4 times per week..."
+  }'
+```
+</CodeGroup>
+
+<Note>
+For follow-up visits, providing the previous note is one of the most impactful context enrichments you can make. It enables Sully to generate notes that reflect the ongoing patient journey rather than treating each visit in isolation.
+</Note>
+
+---
+
+## Custom Instructions
+
+The `instructions` field accepts free-text instructions that guide how the note should be generated. Use this for specialty-specific requirements or personal preferences.
+
+### Example Instructions
+
+| Use Case | Example Instruction |
+|----------|---------------------|
+| Specialty focus | "Focus on cardiovascular symptoms and risk factors" |
+| Format preference | "Use bullet points for the assessment section" |
+| Detail level | "Keep the plan section brief with only essential items" |
+| Compliance | "Include ICD-10 codes for all diagnoses" |
+| Style | "Write in third person, past tense" |
+
+### How It's Used
+
+- **Section emphasis**: Guides which sections receive more detail
+- **Formatting preferences**: Influences use of lists, paragraphs, headers
+- **Content inclusion**: Ensures specific elements are captured
+- **Tone adjustment**: Modifies clinical vs. patient-friendly language
+
+### Code Example
+
+<CodeGroup>
+```typescript TypeScript
+import Sully from '@sullyai/sullyai';
+
+const sully = new Sully();
+
+const note = await sully.notes.create({
+  transcript: "Doctor: Tell me about your chest discomfort...",
+  noteType: { type: 'soap' },
+  instructions: 'Focus on cardiovascular symptoms. Include differential diagnosis in assessment. Use numbered list for plan items.',
+});
+```
+
+```python Python
+from sullyai import Sully
+
+sully = Sully()
+
+note = sully.notes.create(
+    transcript="Doctor: Tell me about your chest discomfort...",
+    note_type={"type": "soap"},
+    instructions="Focus on cardiovascular symptoms. Include differential diagnosis in assessment. Use numbered list for plan items.",
+)
+```
+
+```bash cURL
+curl -X POST "https://api.sully.ai/v1/notes" \
+  -H "X-API-Key: ${SULLY_API_KEY}" \
+  -H "X-Account-Id: ${SULLY_ACCOUNT_ID}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transcript": "Doctor: Tell me about your chest discomfort...",
+    "noteType": { "type": "soap" },
+    "instructions": "Focus on cardiovascular symptoms. Include differential diagnosis in assessment. Use numbered list for plan items."
+  }'
+```
+</CodeGroup>
+
+<Tip>
+Instructions work best when they are specific and actionable. "Be thorough" is less effective than "Include all mentioned symptoms with onset, duration, and severity."
+</Tip>
+
+---
+
+## Free-form Context
+
+The `context` field accepts any additional information that doesn't fit into the other structured fields. This is your catch-all for relevant clinical data.
+
+### Common Use Cases
+
+- **Lab results**: Recent bloodwork, imaging findings
+- **Specialist recommendations**: Notes from referrals
+- **Patient preferences**: Treatment preferences, concerns
+- **Social context**: Relevant life events, support system
+- **Historical data**: Past surgical history, family history
+
+### Code Example
+
+<CodeGroup>
+```typescript TypeScript
+import Sully from '@sullyai/sullyai';
+
+const sully = new Sully();
+
+const note = await sully.notes.create({
+  transcript: "Doctor: I've reviewed your recent lab work. Let's discuss the results...",
+  noteType: { type: 'soap' },
+  context: `
+Recent Labs (2024-01-10):
+- HbA1c: 7.8% (up from 7.2% three months ago)
+- Fasting glucose: 156 mg/dL
+- Creatinine: 1.1 mg/dL (stable)
+- eGFR: 72 mL/min
+
+Cardiology consult note (2024-01-05):
+Recommend continuing current cardiac medications.
+Echo shows preserved EF at 55%.
+No intervention needed at this time.
+
+Patient expressed concern about adding more medications due to cost.
+  `,
+});
+```
+
+```python Python
+from sullyai import Sully
+
+sully = Sully()
+
+note = sully.notes.create(
+    transcript="Doctor: I've reviewed your recent lab work. Let's discuss the results...",
+    note_type={"type": "soap"},
+    context="""
+Recent Labs (2024-01-10):
+- HbA1c: 7.8% (up from 7.2% three months ago)
+- Fasting glucose: 156 mg/dL
+- Creatinine: 1.1 mg/dL (stable)
+- eGFR: 72 mL/min
+
+Cardiology consult note (2024-01-05):
+Recommend continuing current cardiac medications.
+Echo shows preserved EF at 55%.
+No intervention needed at this time.
+
+Patient expressed concern about adding more medications due to cost.
+    """,
+)
+```
+
+```bash cURL
+curl -X POST "https://api.sully.ai/v1/notes" \
+  -H "X-API-Key: ${SULLY_API_KEY}" \
+  -H "X-Account-Id: ${SULLY_ACCOUNT_ID}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transcript": "Doctor: I have reviewed your recent lab work. Let us discuss the results...",
+    "noteType": { "type": "soap" },
+    "context": "Recent Labs (2024-01-10):\n- HbA1c: 7.8%\n- Fasting glucose: 156 mg/dL\n\nCardiology consult: Continue current medications, EF 55%."
+  }'
+```
+</CodeGroup>
+
+---
+
+## Complete Example
+
+Here's a full API call using all available context fields:
+
+<CodeGroup>
+```typescript TypeScript
+import Sully from '@sullyai/sullyai';
+
+const sully = new Sully();
+
+const note = await sully.notes.create({
+  // Required: the transcript
+  transcript: `
+Doctor: Good afternoon, Mrs. Johnson. How have you been since our last visit?
+Patient: The headaches are much better since starting the new medication. I'm only getting them once a week now instead of every day.
+Doctor: That's excellent progress. Any side effects from the topiramate?
+Patient: A little tingling in my fingers sometimes, but nothing too bothersome.
+Doctor: That's a common side effect and usually improves over time. Let's continue the current regimen.
+  `,
+  noteType: { type: 'soap' },
+
+  // Visit date
+  date: '2024-01-15',
+
+  // Patient demographics
+  patientInfo: {
+    name: 'Sarah Johnson',
+    dateOfBirth: '1979-06-14',
+    gender: 'female',
+  },
+
+  // Current medications
+  medicationList: [
+    'Topiramate 50mg daily',
+    'Sumatriptan 50mg PRN',
+    'Ibuprofen 400mg PRN',
+  ],
+
+  // Previous visit note for continuity
+  previousNote: `
+Date: 2023-12-15
+SUBJECTIVE: 44-year-old female with chronic migraines, occurring daily for past 2 months.
+ASSESSMENT: Chronic migraine without aura, poorly controlled on current regimen.
+PLAN: Start topiramate 25mg daily, titrate to 50mg after 1 week. Continue sumatriptan PRN.
+Return in 4 weeks.
+  `,
+
+  // Custom instructions
+  instructions: 'Document the improvement in migraine frequency. Note the paresthesia side effect and that it is being tolerated.',
+
+  // Additional context
+  context: `
+Patient works as an accountant. Busy season approaching (tax season) -
+she expressed concern about maintaining productivity.
+Prefers to avoid additional medications if possible.
+  `,
+});
+
+console.log('Note ID:', note.data.noteId);
+```
+
+```python Python
+from sullyai import Sully
+
+sully = Sully()
+
+note = sully.notes.create(
+    # Required: the transcript
+    transcript="""
+Doctor: Good afternoon, Mrs. Johnson. How have you been since our last visit?
+Patient: The headaches are much better since starting the new medication. I'm only getting them once a week now instead of every day.
+Doctor: That's excellent progress. Any side effects from the topiramate?
+Patient: A little tingling in my fingers sometimes, but nothing too bothersome.
+Doctor: That's a common side effect and usually improves over time. Let's continue the current regimen.
+    """,
+    note_type={"type": "soap"},
+
+    # Visit date
+    date="2024-01-15",
+
+    # Patient demographics
+    patient_info={
+        "name": "Sarah Johnson",
+        "date_of_birth": "1979-06-14",
+        "gender": "female",
+    },
+
+    # Current medications
+    medication_list=[
+        "Topiramate 50mg daily",
+        "Sumatriptan 50mg PRN",
+        "Ibuprofen 400mg PRN",
+    ],
+
+    # Previous visit note for continuity
+    previous_note="""
+Date: 2023-12-15
+SUBJECTIVE: 44-year-old female with chronic migraines, occurring daily for past 2 months.
+ASSESSMENT: Chronic migraine without aura, poorly controlled on current regimen.
+PLAN: Start topiramate 25mg daily, titrate to 50mg after 1 week. Continue sumatriptan PRN.
+Return in 4 weeks.
+    """,
+
+    # Custom instructions
+    instructions="Document the improvement in migraine frequency. Note the paresthesia side effect and that it is being tolerated.",
+
+    # Additional context
+    context="""
+Patient works as an accountant. Busy season approaching (tax season) -
+she expressed concern about maintaining productivity.
+Prefers to avoid additional medications if possible.
+    """,
+)
+
+print(f"Note ID: {note.data.note_id}")
+```
+
+```bash cURL
+curl -X POST "https://api.sully.ai/v1/notes" \
+  -H "X-API-Key: ${SULLY_API_KEY}" \
+  -H "X-Account-Id: ${SULLY_ACCOUNT_ID}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transcript": "Doctor: Good afternoon, Mrs. Johnson. How have you been since our last visit?\nPatient: The headaches are much better since starting the new medication...",
+    "noteType": { "type": "soap" },
+    "date": "2024-01-15",
+    "patientInfo": {
+      "name": "Sarah Johnson",
+      "dateOfBirth": "1979-06-14",
+      "gender": "female"
+    },
+    "medicationList": [
+      "Topiramate 50mg daily",
+      "Sumatriptan 50mg PRN",
+      "Ibuprofen 400mg PRN"
+    ],
+    "previousNote": "Date: 2023-12-15\nSUBJECTIVE: 44-year-old female with chronic migraines...",
+    "instructions": "Document the improvement in migraine frequency. Note the paresthesia side effect and that it is being tolerated.",
+    "context": "Patient works as an accountant. Busy season approaching - she expressed concern about maintaining productivity."
+  }'
+```
+</CodeGroup>
+
+---
+
+## Best Practices
+
+### Provide Context When Available
+
+Every piece of context you provide improves note quality. Even partial information helps:
+
+| What You Have | What to Provide |
+|---------------|-----------------|
+| Patient name only | `patientInfo: { name: "..." }` |
+| Some medications | Provide what you know |
+| Partial previous note | Better than nothing |
+
+### Avoid Unnecessary PHI
+
+Only include PHI that should appear in the generated note:
+
+- **Include**: Patient name (if needed in header), relevant medical history
+- **Avoid**: Social Security numbers, full addresses, insurance details
+
+### Use Instructions for Specialty Needs
+
+Different specialties have different documentation requirements:
+
+| Specialty | Example Instructions |
+|-----------|---------------------|
+| Cardiology | "Include cardiovascular risk factor assessment" |
+| Psychiatry | "Document mental status exam findings in detail" |
+| Pediatrics | "Include developmental milestones and growth percentiles" |
+| Surgery | "Focus on surgical indications and planned procedure" |
+
+### Leverage Previous Notes for Follow-ups
+
+For follow-up visits, `previousNote` provides the most value:
+
+- Enables "Patient returns for follow-up of..." language
+- Allows comparison of symptoms over time
+- Documents treatment response
+- Maintains diagnostic continuity
+
+<Tip>
+If your EHR can programmatically retrieve the previous note for a patient, automate including it in your API calls. This single enrichment dramatically improves follow-up note quality.
+</Tip>
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Create Note API"
+    icon="code"
+    href="/api-reference/notes/create"
+  >
+    Full API reference for the Create Note endpoint
+  </Card>
+  <Card
+    title="Clinical Notes Guide"
+    icon="file-medical"
+    href="/documentation/guides/clinical-notes"
+  >
+    Learn about SOAP notes, custom styles, and templates
+  </Card>
+  <Card
+    title="Note Customization"
+    icon="sliders"
+    href="/documentation/guides/note-customization"
+  >
+    Deep dive into styles and templates for precise control
+  </Card>
+  <Card
+    title="Webhooks"
+    icon="bell"
+    href="/documentation/guides/webhooks"
+  >
+    Get notified when notes are ready
+  </Card>
+</CardGroup>
