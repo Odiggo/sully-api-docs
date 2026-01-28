@@ -9,142 +9,171 @@
   },
   "favicon": "/favicon.png",
   "navigation": {
-    "versions": [
+    "tabs": [
       {
-        "version": "v2",
-        "tabs": [
+        "tab": "Get Started",
+        "groups": [
           {
-            "tab": "Documentation",
-            "groups": [
-              {
-                "group": "Guides",
-                "pages": ["documentation/overview", "documentation/notes"]
-              }
+            "group": "Introduction",
+            "pages": [
+              "documentation/overview",
+              "documentation/quickstart",
+              "api-reference/getting-started/authentication"
             ]
           },
           {
-            "tab": "API Reference",
-            "groups": [
-              {
-                "group": "Getting Started",
-                "pages": ["api-reference/getting-started/authentication"]
-              },
-              {
-                "group": "Notes",
-                "pages": [
-                  "api-reference/notes/get",
-                  "api-reference/notes/create",
-                  "api-reference/notes/delete"
-                ]
-              },
-              {
-                "group": "Note Styles",
-                "pages": ["api-reference/note-styles/create"]
-              },
-              {
-                "group": "Audio Transcriptions",
-                "pages": [
-                  "api-reference-v2/audio-transcriptions/get",
-                  "api-reference-v2/audio-transcriptions/create",
-                  "api-reference-v2/audio-transcriptions/delete",
-                  "api-reference/audio-transcriptions/streaming",
-                  "api-reference/audio-transcriptions/stream-token",
-                  "api-reference/audio-transcriptions/languages"
-                ]
-              },
-              {
-                "group": "Codings",
-                "pages": [
-                  "api-reference/codings/get",
-                  "api-reference/codings/create",
-                  "api-reference/codings/delete"
-                ]
-              },
-              {
-                "group": "Macros",
-                "pages": ["api-reference/macros/detect"]
-              },
-              {
-                "group": "Utils",
-                "pages": ["api-reference/utils/text-to-json"]
-              },
-              {
-                "group": "Events",
-                "pages": [
-                  "api-reference/events/overview",
-                  "api-reference/events/webhooks"
-                ]
-              },
-              {
-                "group": "Schemas",
-                "pages": [
-                  "api-reference/schemas/soap-note",
-                  "api-reference/schemas/note-template"
-                ]
-              }
+            "group": "SDKs",
+            "pages": [
+              "documentation/sdks/typescript",
+              "documentation/sdks/python"
             ]
           }
-        ],
-        "global": {
-          "anchors": [
-            {
-              "anchor": "Demo",
-              "href": "https://github.com/Odiggo/sully-api-demo",
-              "icon": "github"
-            },
-            {
-              "anchor": "Blog",
-              "href": "https://www.sully.ai/blog",
-              "icon": "newspaper"
-            }
-          ]
-        }
+        ]
       },
       {
-        "version": "alpha",
-        "tabs": [
+        "tab": "Guides",
+        "groups": [
           {
-            "tab": "API Reference",
-            "groups": [
-              {
-                "group": "Getting Started",
-                "pages": ["api-reference-alpha/getting-started/authentication"]
-              },
-              {
-                "group": "Medical Consensus",
-                "pages": [
-                  "api-reference-alpha/consensus/create",
-                  "api-reference-alpha/consensus/get",
-                  "api-reference-alpha/consensus/delete"
-                ]
-              },
-              {
-                "group": "Note Templates",
-                "pages": [
-                  "api-reference-alpha/note-templates/create",
-                  "api-reference-alpha/note-templates/get",
-                  "api-reference-alpha/note-templates/delete"
-                ]
-              }
+            "group": "Core Workflows",
+            "pages": [
+              "documentation/guides/transcription",
+              "documentation/guides/clinical-notes",
+              "documentation/guides/note-customization",
+              "documentation/guides/webhooks"
+            ]
+          },
+          {
+            "group": "Integrations",
+            "pages": [
+              "documentation/guides/ehr-integration",
+              "documentation/guides/medical-coding",
+              "documentation/guides/multi-language",
+              "documentation/guides/context-enrichment"
+            ]
+          },
+          {
+            "group": "Production",
+            "pages": [
+              "documentation/production/error-handling",
+              "documentation/production/security"
             ]
           }
-        ],
-        "global": {
-          "anchors": [
-            {
-              "anchor": "Demo",
-              "href": "https://github.com/Odiggo/sully-api-demo",
-              "icon": "github"
-            },
-            {
-              "anchor": "Blog",
-              "href": "https://www.sully.ai/blog",
-              "icon": "newspaper"
-            }
-          ]
-        }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Audio Transcriptions",
+            "pages": [
+              "api-reference-v2/audio-transcriptions/create",
+              "api-reference-v2/audio-transcriptions/get",
+              "api-reference-v2/audio-transcriptions/delete",
+              "api-reference/audio-transcriptions/streaming",
+              "api-reference/audio-transcriptions/stream-token",
+              "api-reference/audio-transcriptions/languages"
+            ]
+          },
+          {
+            "group": "Notes",
+            "pages": [
+              "api-reference/notes/create",
+              "api-reference/notes/get",
+              "api-reference/notes/delete"
+            ]
+          },
+          {
+            "group": "Note Styles",
+            "pages": [
+              "api-reference/note-styles/create"
+            ]
+          },
+          {
+            "group": "Codings",
+            "pages": [
+              "api-reference/codings/create",
+              "api-reference/codings/get",
+              "api-reference/codings/delete"
+            ]
+          },
+          {
+            "group": "Macros",
+            "pages": [
+              "api-reference/macros/detect"
+            ]
+          },
+          {
+            "group": "Utils",
+            "pages": [
+              "api-reference/utils/text-to-json"
+            ]
+          },
+          {
+            "group": "Events",
+            "pages": [
+              "api-reference/events/overview",
+              "api-reference/events/webhooks"
+            ]
+          },
+          {
+            "group": "Schemas",
+            "pages": [
+              "api-reference/schemas/soap-note",
+              "api-reference/schemas/note-template"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Alpha",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "documentation/alpha/overview"
+            ]
+          },
+          {
+            "group": "Alpha Guides",
+            "pages": [
+              "documentation/alpha/medical-consensus",
+              "documentation/alpha/template-generation"
+            ]
+          },
+          {
+            "group": "Alpha API Reference",
+            "pages": [
+              "api-reference-alpha/getting-started/authentication",
+              "api-reference-alpha/consensus/create",
+              "api-reference-alpha/consensus/get",
+              "api-reference-alpha/consensus/delete",
+              "api-reference-alpha/note-templates/create",
+              "api-reference-alpha/note-templates/get",
+              "api-reference-alpha/note-templates/delete"
+            ]
+          }
+        ]
       }
-    ]
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Dashboard",
+          "href": "https://dashboard.api.sully.ai",
+          "icon": "gauge"
+        },
+        {
+          "anchor": "Demo",
+          "href": "https://github.com/Odiggo/sully-api-demo",
+          "icon": "github"
+        },
+        {
+          "anchor": "Blog",
+          "href": "https://www.sully.ai/blog",
+          "icon": "newspaper"
+        }
+      ]
+    }
   },
   "logo": {
     "light": "/logo/light.svg",
