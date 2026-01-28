@@ -1,0 +1,535 @@
+---
+title: 'Security'
+description: 'Security best practices for healthcare API integrations with Sully.ai'
+---
+
+Building healthcare applications requires careful attention to security. This guide covers the essential security practices for integrating with Sully.ai, from API key management to handling protected health information (PHI).
+
+## API Key Management
+
+Your API key is the gateway to your Sully.ai account. Protecting it is critical to preventing unauthorized access.
+
+### Never Hardcode Keys
+
+<Warning>
+Never commit API keys to source control or include them in client-side code.
+</Warning>
+
+<CodeGroup>
+```typescript TypeScript (Bad)
+// NEVER do this
+const sully = new Sully({
+  apiKey: 'sk_live_abc123def456', // Exposed in source code!
+  accountId: 'acc_xyz789',
+});
+```
+
+```python Python (Bad)
+# NEVER do this
+sully = Sully(
+    api_key="sk_live_abc123def456",  # Exposed in source code!
+    account_id="acc_xyz789",
+)
+```
+</CodeGroup>
+
+### Use Environment Variables
+
+For local development and simple deployments, use environment variables:
+
+<CodeGroup>
+```typescript TypeScript
+import Sully from '@sullyai/sullyai';
+
+const sully = new Sully({
+  apiKey: process.env.SULLY_API_KEY,
+  accountId: process.env.SULLY_ACCOUNT_ID,
+});
+
+// Validate environment variables at startup
+if (!process.env.SULLY_API_KEY || !process.env.SULLY_ACCOUNT_ID) {
+  throw new Error('Missing required Sully.ai credentials');
+}
+```
+
+```python Python
+import os
+from sullyai import Sully
+
+api_key = os.environ.get("SULLY_API_KEY")
+account_id = os.environ.get("SULLY_ACCOUNT_ID")
+
+# Validate environment variables at startup
+if not api_key or not account_id:
+    raise ValueError("Missing required Sully.ai credentials")
+
+sully = Sully(
+    api_key=api_key,
+    account_id=account_id,
+)
+```
+</CodeGroup>
+
+### Use a Secrets Manager for Production
+
+For production deployments, use a dedicated secrets manager:
+
+<CodeGroup>
+```typescript TypeScript (AWS Secrets Manager)
+import {
+  SecretsManagerClient,
+  GetSecretValueCommand,
+} from '@aws-sdk/client-secrets-manager';
+import Sully from '@sullyai/sullyai';
+
+interface SullySecrets {
+  apiKey: string;
+  accountId: string;
+}
+
+async function getSullyClient(): Promise<Sully> {
+  const client = new SecretsManagerClient({ region: 'us-east-1' });
+
+  const response = await client.send(
+    new GetSecretValueCommand({ SecretId: 'sully-api-credentials' })
+  );
+
+  const secrets: SullySecrets = JSON.parse(response.SecretString!);
+
+  return new Sully({
+    apiKey: secrets.apiKey,
+    accountId: secrets.accountId,
+  });
+}
+```
+
+```python Python (AWS Secrets Manager)
+import json
+import boto3
+from sullyai import Sully
+
+def get_sully_client() -> Sully:
+    client = boto3.client("secretsmanager", region_name="us-east-1")
+
+    response = client.get_secret_value(SecretId="sully-api-credentials")
+    secrets = json.loads(response["SecretString"])
+
+    return Sully(
+        api_key=secrets["apiKey"],
+        account_id=secrets["accountId"],
+    )
+```
+</CodeGroup>
+
+Other supported secrets managers include:
+- **HashiCorp Vault**
+- **Google Cloud Secret Manager**
+- **Azure Key Vault**
+- **Doppler**
+
+### Key Rotation and Environment Separation
+
+| Practice | Description |
+|----------|-------------|
+| **Rotate keys periodically** | Rotate API keys every 90 days or after personnel changes |
+| **Separate environments** | Use different API keys for development, staging, and production |
+| **Limit access** | Only give API keys to team members who need them |
+| **Audit usage** | Regularly review API key usage in the Sully Dashboard |
+
+## Webhook Verification
+
+If your integration receives [webhooks](/documentation/guides/webhooks), always verify the signature before processing events.
+
+### Signature Format
+
+Every webhook includes an `x-sully-signature` header:
+
+```
+x-sully-signature: t=1706123456,v1=5257a869e7ecebeda32affa62cdca3fa51cad7e77a0e56ff536d0ce8e108d8bd
+```
+
+| Component | Description |
+|-----------|-------------|
+| `t` | Unix timestamp when the request was signed |
+| `v1` | HMAC-SHA256 signature of the payload |
+
+### Verification Requirements
+
+<Warning>
+Always verify both the signature AND the timestamp. Skipping either check leaves your endpoint vulnerable.
+</Warning>
+
+1. **Verify the signature** - Compute HMAC-SHA256 and compare using constant-time comparison
+2. **Check the timestamp** - Reject requests older than 5 minutes to prevent replay attacks
+
+### Verification Implementation
+
+<CodeGroup>
+```typescript TypeScript
+import * as crypto from 'crypto';
+
+function verifyWebhookSignature(
+  signatureHeader: string,
+  rawBody: string,
+  secret: string
+): boolean {
+  // Parse header components
+  const parts: Record<string, string> = {};
+  for (const part of signatureHeader.split(',')) {
+    const [key, value] = part.split('=');
+    if (key && value) parts[key.trim()] = value.trim();
+  }
+
+  const { t: timestamp, v1: signature } = parts;
+  if (!timestamp || !signature) return false;
+
+  // Reject requests older than 5 minutes (replay protection)
+  const currentTime = Math.floor(Date.now() / 1000);
+  if (Math.abs(currentTime - parseInt(timestamp, 10)) > 300) {
+    console.error('Webhook timestamp expired');
+    return false;
+  }
+
+  // Compute expected signature
+  const signedPayload = `${timestamp}.${rawBody}`;
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(signedPayload, 'utf8')
+    .digest('hex');
+
+  // Constant-time comparison to prevent timing attacks
+  return crypto.timingSafeEqual(
+    Buffer.from(signature, 'hex'),
+    Buffer.from(expectedSignature, 'hex')
+  );
+}
+```
+
+```python Python
+import hmac
+import hashlib
+import time
+
+def verify_webhook_signature(
+    signature_header: str,
+    raw_body: str,
+    secret: str
+) -> bool:
+    # Parse header components
+    parts = {}
+    for part in signature_header.split(','):
+        if '=' in part:
+            key, value = part.split('=', 1)
+            parts[key.strip()] = value.strip()
+
+    timestamp = parts.get('t')
+    signature = parts.get('v1')
+    if not timestamp or not signature:
+        return False
+
+    # Reject requests older than 5 minutes (replay protection)
+    current_time = int(time.time())
+    if abs(current_time - int(timestamp)) > 300:
+        print('Webhook timestamp expired')
+        return False
+
+    # Compute expected signature
+    signed_payload = f"{timestamp}.{raw_body}"
+    expected_signature = hmac.new(
+        secret.encode('utf-8'),
+        signed_payload.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+
+    # Constant-time comparison to prevent timing attacks
+    return hmac.compare_digest(signature, expected_signature)
+```
+</CodeGroup>
+
+<Tip>
+For complete webhook handling examples including event processing, see the [Webhooks Guide](/documentation/guides/webhooks).
+</Tip>
+
+## Data in Transit
+
+All communication with Sully.ai is encrypted in transit.
+
+### HTTPS Required
+
+- All API calls must use **HTTPS** (TLS 1.2 or higher)
+- HTTP requests are rejected
+- WebSocket connections must use **WSS** (WebSocket Secure)
+
+<CodeGroup>
+```typescript TypeScript
+// Correct: HTTPS
+const BASE_URL = 'https://api.sully.ai';
+
+// Correct: WSS for streaming
+const WS_URL = 'wss://api.sully.ai/stream';
+
+// WRONG: Never use HTTP
+// const BASE_URL = 'http://api.sully.ai';  // Will be rejected
+```
+
+```python Python
+# Correct: HTTPS
+BASE_URL = "https://api.sully.ai"
+
+# Correct: WSS for streaming
+WS_URL = "wss://api.sully.ai/stream"
+
+# WRONG: Never use HTTP
+# BASE_URL = "http://api.sully.ai"  # Will be rejected
+```
+</CodeGroup>
+
+### Certificate Validation
+
+Always validate TLS certificates. Never disable certificate verification, even in development:
+
+<CodeGroup>
+```typescript TypeScript
+// The SDK handles certificate validation automatically
+// Never override this behavior
+```
+
+```python Python
+# The SDK handles certificate validation automatically
+# Never do this:
+# requests.get(url, verify=False)  # DANGEROUS
+```
+</CodeGroup>
+
+## Access Control
+
+Sully.ai uses account-based isolation to separate data between customers.
+
+### Account Isolation
+
+| Concept | Description |
+|---------|-------------|
+| **Account ID** | Identifies your organization; all your data is isolated to this account |
+| **API Key** | Authenticates requests; scoped to a single account |
+| **Resource IDs** | Transcriptions, notes, etc. are only accessible within your account |
+
+### Multi-Tenant Patterns
+
+If you're building a multi-tenant application, consider these patterns:
+
+**Option 1: Separate API Keys**
+
+Request a separate API key for each tenant from Sully.ai. This provides the strongest isolation.
+
+```typescript
+// Each tenant has their own credentials
+const tenantClients = new Map<string, Sully>();
+
+function getClientForTenant(tenantId: string): Sully {
+  if (!tenantClients.has(tenantId)) {
+    const credentials = getTenantCredentials(tenantId);
+    tenantClients.set(
+      tenantId,
+      new Sully({
+        apiKey: credentials.apiKey,
+        accountId: credentials.accountId,
+      })
+    );
+  }
+  return tenantClients.get(tenantId)!;
+}
+```
+
+**Option 2: Your Own Auth Layer**
+
+Use a single Sully.ai account and implement your own authorization layer to control which tenants can access which resources.
+
+```typescript
+// Map Sully resources to your tenants
+interface ResourceMapping {
+  sullyResourceId: string;
+  tenantId: string;
+  createdAt: Date;
+}
+
+// Verify tenant access before returning data
+async function getNote(noteId: string, requestingTenantId: string) {
+  const mapping = await db.resourceMappings.findOne({ sullyResourceId: noteId });
+
+  if (mapping?.tenantId !== requestingTenantId) {
+    throw new Error('Unauthorized');
+  }
+
+  return sully.notes.get(noteId);
+}
+```
+
+## Handling PHI
+
+When working with protected health information (PHI), follow these practices to maintain compliance.
+
+### Data Minimization
+
+Only send data that's necessary for the operation:
+
+<CodeGroup>
+```typescript TypeScript
+// Good: Send only the required transcript
+await sully.notes.create({
+  transcript: transcription,
+  noteType: { type: 'soap' },
+});
+
+// Avoid: Don't include unnecessary patient identifiers
+// in metadata or other fields
+```
+
+```python Python
+# Good: Send only the required transcript
+sully.notes.create(
+    transcript=transcription,
+    note_type={"type": "soap"},
+)
+
+# Avoid: Don't include unnecessary patient identifiers
+# in metadata or other fields
+```
+</CodeGroup>
+
+### Logging Practices
+
+<Warning>
+Never log full transcripts, clinical notes, or other PHI in your application logs.
+</Warning>
+
+<CodeGroup>
+```typescript TypeScript
+// Good: Log resource IDs only
+console.log(`Note generated: ${noteId}`);
+
+// Bad: Never log PHI
+// console.log(`Note content: ${note.payload.markdown}`);  // DON'T DO THIS
+
+// Good: If you must log for debugging, redact sensitive data
+function sanitizeForLogging(data: unknown): string {
+  // Implement redaction logic
+  return JSON.stringify(data).replace(/transcript|note|content/gi, '[REDACTED]');
+}
+```
+
+```python Python
+# Good: Log resource IDs only
+print(f"Note generated: {note_id}")
+
+# Bad: Never log PHI
+# print(f"Note content: {note.payload.markdown}")  # DON'T DO THIS
+
+# Good: If you must log for debugging, redact sensitive data
+import re
+
+def sanitize_for_logging(data: str) -> str:
+    # Implement redaction logic
+    return re.sub(r'transcript|note|content', '[REDACTED]', str(data), flags=re.IGNORECASE)
+```
+</CodeGroup>
+
+### Webhook Endpoint Security
+
+Secure your webhook endpoint to protect incoming PHI:
+
+- Use HTTPS only
+- Verify webhook signatures (see above)
+- Process events asynchronously and acknowledge quickly
+- Store received data in encrypted storage
+- Implement access controls on your endpoint
+
+### Data Retention
+
+Consider implementing data retention policies:
+
+- Delete transcriptions and notes from Sully.ai when no longer needed
+- Use the `DELETE` endpoints to remove resources
+- Document your retention policies for compliance audits
+
+<CodeGroup>
+```typescript TypeScript
+// Delete resources when no longer needed
+await sully.audio.transcriptions.delete(transcriptionId);
+await sully.notes.delete(noteId);
+```
+
+```python Python
+# Delete resources when no longer needed
+sully.audio.transcriptions.delete(transcription_id)
+sully.notes.delete(note_id)
+```
+</CodeGroup>
+
+## Incident Response
+
+If you suspect your API key has been compromised, act immediately.
+
+### Key Compromise Response
+
+1. **Revoke the key immediately** - Go to the [Sully Dashboard](https://dashboard.sully.ai) and revoke the compromised key
+2. **Generate a new key** - Create a new API key in the dashboard
+3. **Update all services** - Deploy the new key to all applications using the compromised key
+4. **Audit recent activity** - Review API logs in the dashboard for unauthorized access
+5. **Investigate the breach** - Determine how the key was exposed and fix the vulnerability
+
+### Contact Support
+
+For security concerns or to report a potential breach, contact the Sully.ai security team:
+
+- Email: [support@sully.ai](mailto:support@sully.ai)
+- Subject line: "Security Incident" for priority handling
+
+## Security Checklist
+
+Use this checklist before deploying to production:
+
+<Check>API keys stored in environment variables or secrets manager</Check>
+<Check>No API keys in source code or version control</Check>
+<Check>Webhook signature verification enabled</Check>
+<Check>Webhook timestamp validation enabled (5-minute window)</Check>
+<Check>All API connections use HTTPS</Check>
+<Check>All WebSocket connections use WSS</Check>
+<Check>No PHI in application logs</Check>
+<Check>Key rotation process documented</Check>
+<Check>Incident response plan in place</Check>
+<Check>Data retention policy defined</Check>
+<Check>Webhook endpoint secured with HTTPS</Check>
+<Check>Different API keys for dev/staging/production</Check>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Webhooks Guide"
+    icon="webhook"
+    href="/documentation/guides/webhooks"
+  >
+    Complete guide to implementing secure webhook handlers
+  </Card>
+  <Card
+    title="Authentication"
+    icon="key"
+    href="/api-reference/getting-started/authentication"
+  >
+    API authentication reference
+  </Card>
+  <Card
+    title="TypeScript SDK"
+    icon="js"
+    href="/documentation/sdks/typescript"
+  >
+    Type-safe SDK with built-in security features
+  </Card>
+  <Card
+    title="Python SDK"
+    icon="python"
+    href="/documentation/sdks/python"
+  >
+    Python SDK with secure credential handling
+  </Card>
+</CardGroup>
