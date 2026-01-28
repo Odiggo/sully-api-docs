@@ -88,6 +88,11 @@
         "global": {
           "anchors": [
             {
+              "anchor": "Demo",
+              "href": "https://github.com/Odiggo/sully-api-demo",
+              "icon": "github"
+            },
+            {
               "anchor": "Blog",
               "href": "https://www.sully.ai/blog",
               "icon": "newspaper"
@@ -126,6 +131,11 @@
         ],
         "global": {
           "anchors": [
+            {
+              "anchor": "Demo",
+              "href": "https://github.com/Odiggo/sully-api-demo",
+              "icon": "github"
+            },
             {
               "anchor": "Blog",
               "href": "https://www.sully.ai/blog",
