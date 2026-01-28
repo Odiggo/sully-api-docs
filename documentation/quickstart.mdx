@@ -1,0 +1,321 @@
+---
+title: 'Quickstart'
+description: 'Go from zero to a working Sully.ai integration in 5 minutes'
+---
+
+This guide walks you through your first Sully.ai integration: uploading an audio file, transcribing it, and generating a SOAP note.
+
+## Prerequisites
+
+Before you begin, make sure you have:
+
+- A **Sully.ai account** with API access ([contact us](mailto:support@sully.ai) to get started)
+- Your **API Key** and **Account ID** from the Sully dashboard
+- **Node.js 18+** or **Python 3.8+** installed (for SDK usage)
+
+## Step 1: Install the SDK
+
+<CodeGroup>
+```bash TypeScript
+npm install @sullyai/sullyai
+```
+
+```bash Python
+pip install sullyai
+```
+
+```bash cURL
+# No installation needed for HTTP requests
+```
+</CodeGroup>
+
+## Step 2: Set Your Credentials
+
+Store your credentials as environment variables:
+
+<CodeGroup>
+```bash TypeScript
+export SULLY_API_KEY="your-api-key"
+export SULLY_ACCOUNT_ID="your-account-id"
+```
+
+```bash Python
+export SULLY_API_KEY="your-api-key"
+export SULLY_ACCOUNT_ID="your-account-id"
+```
+
+```bash cURL
+export SULLY_API_KEY="your-api-key"
+export SULLY_ACCOUNT_ID="your-account-id"
+```
+</CodeGroup>
+
+## Step 3: Complete Working Example
+
+This example demonstrates the full workflow: upload audio, wait for transcription, generate a SOAP note, and retrieve the result.
+
+<CodeGroup>
+```typescript TypeScript
+import Sully from '@sullyai/sullyai';
+import * as fs from 'fs';
+
+const sully = new Sully({
+  apiKey: process.env.SULLY_API_KEY,
+  accountId: process.env.SULLY_ACCOUNT_ID,
+});
+
+async function main() {
+  // 1. Upload audio file for transcription
+  const audioFile = fs.readFileSync('./patient-visit.mp3');
+  const transcriptionResponse = await sully.audio.transcriptions.create({
+    audio: new File([audioFile], 'patient-visit.mp3', { type: 'audio/mpeg' }),
+  });
+
+  const transcriptionId = transcriptionResponse.data.transcriptionId;
+  console.log(`Transcription started: ${transcriptionId}`);
+
+  // 2. Poll until transcription completes
+  let transcription;
+  while (true) {
+    const status = await sully.audio.transcriptions.get(transcriptionId);
+
+    if (status.data.status === 'completed') {
+      transcription = status.data.payload.transcription;
+      console.log('Transcription complete!');
+      break;
+    }
+
+    if (status.data.status === 'failed') {
+      throw new Error('Transcription failed');
+    }
+
+    // Status is 'pending' or 'processing' - wait and retry
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+
+  // 3. Generate SOAP note from transcription
+  const noteResponse = await sully.notes.create({
+    transcript: transcription,
+    noteType: { type: 'soap' },
+  });
+
+  const noteId = noteResponse.data.noteId;
+  console.log(`Note generation started: ${noteId}`);
+
+  // 4. Poll until note completes
+  let note;
+  while (true) {
+    const status = await sully.notes.get(noteId);
+
+    if (status.data.status === 'completed') {
+      note = status.data.payload;
+      console.log('Note complete!');
+      break;
+    }
+
+    if (status.data.status === 'failed') {
+      throw new Error('Note generation failed');
+    }
+
+    // Status is 'pending' or 'processing' - wait and retry
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+
+  // 5. Print the result
+  console.log('\n--- Generated SOAP Note ---\n');
+  console.log(note);
+}
+
+main().catch(console.error);
+```
+
+```python Python
+import os
+import time
+from sullyai import Sully
+
+sully = Sully(
+    api_key=os.environ["SULLY_API_KEY"],
+    account_id=os.environ["SULLY_ACCOUNT_ID"],
+)
+
+def main():
+    # 1. Upload audio file for transcription
+    with open("./patient-visit.mp3", "rb") as audio_file:
+        transcription_response = sully.audio.transcriptions.create(
+            audio=audio_file
+        )
+
+    transcription_id = transcription_response.data.transcription_id
+    print(f"Transcription started: {transcription_id}")
+
+    # 2. Poll until transcription completes
+    while True:
+        status = sully.audio.transcriptions.get(transcription_id)
+
+        if status.data.status == "completed":
+            transcription = status.data.payload.transcription
+            print("Transcription complete!")
+            break
+
+        if status.data.status == "failed":
+            raise Exception("Transcription failed")
+
+        # Status is 'pending' or 'processing' - wait and retry
+        time.sleep(2)
+
+    # 3. Generate SOAP note from transcription
+    note_response = sully.notes.create(
+        transcript=transcription,
+        note_type={"type": "soap"}
+    )
+
+    note_id = note_response.data.note_id
+    print(f"Note generation started: {note_id}")
+
+    # 4. Poll until note completes
+    while True:
+        status = sully.notes.get(note_id)
+
+        if status.data.status == "completed":
+            note = status.data.payload
+            print("Note complete!")
+            break
+
+        if status.data.status == "failed":
+            raise Exception("Note generation failed")
+
+        # Status is 'pending' or 'processing' - wait and retry
+        time.sleep(2)
+
+    # 5. Print the result
+    print("\n--- Generated SOAP Note ---\n")
+    print(note)
+
+if __name__ == "__main__":
+    main()
+```
+
+```bash cURL
+#!/bin/bash
+set -euo pipefail
+
+BASE_URL="https://api.sully.ai"
+
+# 1. Upload audio file for transcription
+echo "Uploading audio file..."
+TRANSCRIPTION_RESPONSE=$(curl -s -X POST "${BASE_URL}/v2/audio/transcriptions" \
+  -H "X-API-Key: ${SULLY_API_KEY}" \
+  -H "X-Account-Id: ${SULLY_ACCOUNT_ID}" \
+  -F "audio=@./patient-visit.mp3")
+
+TRANSCRIPTION_ID=$(echo "${TRANSCRIPTION_RESPONSE}" | jq -r '.data.transcriptionId')
+echo "Transcription started: ${TRANSCRIPTION_ID}"
+
+# 2. Poll until transcription completes
+echo "Waiting for transcription..."
+while true; do
+  STATUS_RESPONSE=$(curl -s -X GET "${BASE_URL}/v2/audio/transcriptions/${TRANSCRIPTION_ID}" \
+    -H "X-API-Key: ${SULLY_API_KEY}" \
+    -H "X-Account-Id: ${SULLY_ACCOUNT_ID}")
+
+  STATUS=$(echo "${STATUS_RESPONSE}" | jq -r '.data.status')
+
+  if [ "${STATUS}" = "completed" ]; then
+    TRANSCRIPTION=$(echo "${STATUS_RESPONSE}" | jq -r '.data.payload.transcription')
+    echo "Transcription complete!"
+    break
+  elif [ "${STATUS}" = "failed" ]; then
+    echo "Transcription failed"
+    exit 1
+  fi
+
+  sleep 2
+done
+
+# 3. Generate SOAP note from transcription
+echo "Generating SOAP note..."
+NOTE_RESPONSE=$(curl -s -X POST "${BASE_URL}/v1/notes" \
+  -H "X-API-Key: ${SULLY_API_KEY}" \
+  -H "X-Account-Id: ${SULLY_ACCOUNT_ID}" \
+  -H "Content-Type: application/json" \
+  -d "{\"transcript\": ${TRANSCRIPTION}, \"noteType\": {\"type\": \"soap\"}}")
+
+NOTE_ID=$(echo "${NOTE_RESPONSE}" | jq -r '.data.noteId')
+echo "Note generation started: ${NOTE_ID}"
+
+# 4. Poll until note completes
+echo "Waiting for note generation..."
+while true; do
+  STATUS_RESPONSE=$(curl -s -X GET "${BASE_URL}/v1/notes/${NOTE_ID}" \
+    -H "X-API-Key: ${SULLY_API_KEY}" \
+    -H "X-Account-Id: ${SULLY_ACCOUNT_ID}")
+
+  STATUS=$(echo "${STATUS_RESPONSE}" | jq -r '.data.status')
+
+  if [ "${STATUS}" = "completed" ]; then
+    echo "Note complete!"
+    break
+  elif [ "${STATUS}" = "failed" ]; then
+    echo "Note generation failed"
+    exit 1
+  fi
+
+  sleep 2
+done
+
+# 5. Print the result
+echo ""
+echo "--- Generated SOAP Note ---"
+echo ""
+echo "${STATUS_RESPONSE}" | jq '.data.payload'
+```
+</CodeGroup>
+
+## Understanding the Status Flow
+
+Both transcriptions and notes follow the same status lifecycle:
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Request received, waiting to be processed |
+| `processing` | Actively being processed |
+| `completed` | Successfully finished, result available in `payload` |
+| `failed` | An error occurred during processing |
+
+<Tip>
+For production applications, consider using [webhooks](/api-reference/events/webhooks) instead of polling to receive notifications when processing completes.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Audio Transcription"
+    icon="microphone"
+    href="/documentation/notes#1-transcribe-audio"
+  >
+    Learn about streaming audio, language support, and advanced transcription options
+  </Card>
+  <Card
+    title="Note Customization"
+    icon="sliders"
+    href="/documentation/notes#custom-note-styles"
+  >
+    Create custom note styles and structured templates for your practice
+  </Card>
+  <Card
+    title="TypeScript SDK"
+    icon="js"
+    href="https://www.npmjs.com/package/@sullyai/sullyai"
+  >
+    Full SDK reference and examples for Node.js applications
+  </Card>
+  <Card
+    title="Python SDK"
+    icon="python"
+    href="https://pypi.org/project/sullyai/"
+  >
+    Full SDK reference and examples for Python applications
+  </Card>
+</CardGroup>
