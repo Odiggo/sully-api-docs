@@ -1,0 +1,398 @@
+---
+title: 'Python SDK'
+description: 'Official Python SDK for the Sully.ai API'
+---
+
+The official Python SDK provides a convenient way to interact with the Sully.ai API from your Python applications. It includes type hints, Pydantic models for response validation, and supports both synchronous and asynchronous usage.
+
+## Installation
+
+Install the SDK using pip:
+
+```bash
+pip install sullyai
+```
+
+## Quick Setup
+
+### Environment Variables
+
+Set your API credentials as environment variables:
+
+```bash
+export SULLY_API_KEY="your-api-key"
+export SULLY_ACCOUNT_ID="your-account-id"
+```
+
+### Initialize the Client
+
+```python
+from sullyai import SullyAI
+
+# Client automatically reads from environment variables
+client = SullyAI()
+
+# Or pass credentials explicitly
+client = SullyAI(
+    api_key="your-api-key",
+    account_id="your-account-id"
+)
+```
+
+## Sync vs Async
+
+The SDK provides both synchronous and asynchronous clients to fit your application's needs.
+
+### Synchronous Client
+
+Use `SullyAI` for standard synchronous operations:
+
+```python
+from sullyai import SullyAI
+
+client = SullyAI()
+
+# Make synchronous API calls
+transcription = client.audio.transcriptions.create(
+    audio=open("recording.mp3", "rb")
+)
+```
+
+### Asynchronous Client
+
+Use `AsyncSullyAI` for async applications with asyncio:
+
+```python
+import asyncio
+from sullyai import AsyncSullyAI
+
+async def main():
+    client = AsyncSullyAI()
+
+    # Make async API calls
+    transcription = await client.audio.transcriptions.create(
+        audio=open("recording.mp3", "rb")
+    )
+
+    print(transcription.transcription_id)
+
+asyncio.run(main())
+```
+
+## Audio Transcriptions
+
+### Upload a File
+
+Submit an audio file for transcription:
+
+```python
+from sullyai import SullyAI
+
+client = SullyAI()
+
+# Upload an audio file
+with open("patient-visit.mp3", "rb") as audio_file:
+    transcription = client.audio.transcriptions.create(
+        audio=audio_file
+    )
+
+print(f"Transcription ID: {transcription.transcription_id}")
+```
+
+### Poll for Completion
+
+Audio transcription is an asynchronous process. Poll until it completes:
+
+**Synchronous polling:**
+
+```python
+import time
+from sullyai import SullyAI
+
+client = SullyAI()
+
+# Upload the file
+with open("patient-visit.mp3", "rb") as audio_file:
+    transcription = client.audio.transcriptions.create(audio=audio_file)
+
+# Poll until complete
+while True:
+    result = client.audio.transcriptions.retrieve(transcription.transcription_id)
+
+    if result.status == "STATUS_SUCCEEDED":
+        print(f"Transcription: {result.payload.transcription}")
+        break
+    elif result.status == "STATUS_ERROR":
+        raise Exception("Transcription failed")
+
+    time.sleep(2)
+```
+
+**Asynchronous polling:**
+
+```python
+import asyncio
+from sullyai import AsyncSullyAI
+
+async def transcribe_audio(file_path: str) -> str:
+    client = AsyncSullyAI()
+
+    # Upload the file
+    with open(file_path, "rb") as audio_file:
+        transcription = await client.audio.transcriptions.create(audio=audio_file)
+
+    # Poll until complete
+    while True:
+        result = await client.audio.transcriptions.retrieve(transcription.transcription_id)
+
+        if result.status == "STATUS_SUCCEEDED":
+            return result.payload.transcription
+        elif result.status == "STATUS_ERROR":
+            raise Exception("Transcription failed")
+
+        await asyncio.sleep(2)
+
+# Run the async function
+transcript = asyncio.run(transcribe_audio("patient-visit.mp3"))
+```
+
+### Delete a Transcription
+
+Remove a transcription when no longer needed:
+
+```python
+client.audio.transcriptions.delete(transcription_id="tr_abc123")
+```
+
+## Notes
+
+### Create a SOAP Note
+
+Generate a SOAP note from a transcript:
+
+```python
+from sullyai import SullyAI
+
+client = SullyAI()
+
+note = client.notes.create(
+    transcript="Patient reports headache for 3 days. Pain is moderate, located in frontal region. No nausea or visual disturbances. Recommending OTC pain relief and follow-up if symptoms persist.",
+    note_type={"type": "soap"}
+)
+
+print(f"Note ID: {note.note_id}")
+```
+
+### Create with Context
+
+Provide additional context to improve note quality:
+
+```python
+from sullyai import SullyAI
+
+client = SullyAI()
+
+note = client.notes.create(
+    transcript="Patient reports headache for 3 days...",
+    note_type={"type": "soap"},
+    date="2024-01-15",
+    patient_info={
+        "name": "Jane Doe",
+        "date_of_birth": "1985-03-22",
+        "gender": "female"
+    },
+    medication_list=[
+        {"name": "Lisinopril", "dosage": "10mg", "frequency": "daily"},
+        {"name": "Metformin", "dosage": "500mg", "frequency": "twice daily"}
+    ],
+    instructions=[
+        "Include vital signs in assessment",
+        "Note any medication interactions"
+    ]
+)
+```
+
+### Retrieve a Note
+
+Poll for the completed note:
+
+```python
+import time
+from sullyai import SullyAI
+
+client = SullyAI()
+
+# Create the note
+note = client.notes.create(
+    transcript="Patient visit transcript...",
+    note_type={"type": "soap"}
+)
+
+# Poll until complete
+while True:
+    result = client.notes.retrieve(note.note_id)
+
+    if result.status == "STATUS_SUCCEEDED":
+        print(f"Markdown: {result.payload.markdown}")
+        print(f"JSON: {result.payload.json}")
+        break
+    elif result.status == "STATUS_ERROR":
+        raise Exception("Note generation failed")
+
+    time.sleep(2)
+```
+
+## Response Handling
+
+### Pydantic Models
+
+All API responses are returned as Pydantic models with full type hints:
+
+```python
+from sullyai import SullyAI
+
+client = SullyAI()
+
+transcription = client.audio.transcriptions.create(
+    audio=open("recording.mp3", "rb")
+)
+
+# Access typed attributes
+print(transcription.transcription_id)  # str
+print(transcription.status)            # str
+```
+
+### Serialization Methods
+
+Convert responses to different formats:
+
+```python
+# Convert to JSON string
+json_str = transcription.to_json()
+
+# Convert to dictionary
+data_dict = transcription.to_dict()
+```
+
+### Distinguishing Null vs Missing Fields
+
+Use `model_fields_set` to check which fields were explicitly returned:
+
+```python
+result = client.notes.retrieve(note_id)
+
+# Check if a field was in the response
+if "payload" in result.model_fields_set:
+    # Field was present (even if None)
+    print(result.payload)
+else:
+    # Field was not in the response
+    print("Payload not yet available")
+```
+
+## Error Handling
+
+The SDK raises specific exceptions for different error conditions:
+
+```python
+from sullyai import SullyAI
+from sullyai.errors import (
+    APIError,
+    AuthenticationError,
+    RateLimitError,
+    BadRequestError,
+    NotFoundError,
+    APIConnectionError
+)
+
+client = SullyAI()
+
+try:
+    note = client.notes.retrieve("invalid-id")
+except AuthenticationError:
+    print("Invalid API key or account ID")
+except RateLimitError as e:
+    print(f"Rate limited. Retry after: {e.retry_after}")
+except BadRequestError as e:
+    print(f"Invalid request: {e.message}")
+except NotFoundError:
+    print("Resource not found")
+except APIConnectionError:
+    print("Failed to connect to Sully API")
+except APIError as e:
+    print(f"API error: {e.status_code} - {e.message}")
+```
+
+### Exception Classes
+
+| Exception | Description |
+|-----------|-------------|
+| `APIError` | Base class for all API errors |
+| `AuthenticationError` | Invalid or missing API credentials |
+| `RateLimitError` | Too many requests; includes `retry_after` |
+| `BadRequestError` | Invalid request parameters |
+| `NotFoundError` | Requested resource does not exist |
+| `APIConnectionError` | Network connectivity issues |
+
+## Automatic Retries
+
+The SDK automatically retries failed requests with exponential backoff. By default, it attempts **2 retries** for transient errors (network issues, 5xx errors).
+
+```python
+from sullyai import SullyAI
+
+# Use default retry behavior (2 attempts)
+client = SullyAI()
+
+# Customize max retries
+client = SullyAI(max_retries=5)
+
+# Disable retries
+client = SullyAI(max_retries=0)
+```
+
+## Timeouts
+
+Configure timeouts to control how long the client waits for responses.
+
+### Global Timeout
+
+Set a default timeout for all requests:
+
+```python
+from sullyai import SullyAI
+
+# Timeout in seconds
+client = SullyAI(timeout=30.0)
+```
+
+### Per-Request Timeout
+
+Override the timeout for individual requests:
+
+```python
+# This request has a longer timeout for large files
+transcription = client.audio.transcriptions.create(
+    audio=large_audio_file,
+    timeout=120.0
+)
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Audio Transcription Guide"
+    icon="microphone"
+    href="/documentation/notes#1-transcribe-audio"
+  >
+    Learn about transcription options and best practices
+  </Card>
+  <Card
+    title="Error Handling Guide"
+    icon="triangle-exclamation"
+    href="/api-reference/events/overview"
+  >
+    Understand API events and error responses
+  </Card>
+</CardGroup>
