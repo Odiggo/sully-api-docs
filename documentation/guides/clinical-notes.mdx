@@ -1,0 +1,755 @@
+---
+title: 'Clinical Notes'
+description: 'Generate clinical notes from transcriptions — SOAP notes, custom styles, and templates'
+---
+
+The Sully.ai API transforms patient conversation transcriptions into structured clinical documentation. This guide covers three approaches to note generation, each suited to different documentation needs.
+
+## Overview
+
+Sully.ai offers three methods for generating clinical notes:
+
+| Approach | Best For | Configuration |
+|----------|----------|---------------|
+| **SOAP Notes** | Standard clinical visits, quick setup | Built-in, no configuration needed |
+| **Custom Styles** | Matching existing note formats | Provide a sample note |
+| **Note Templates** | Precise structured output, EHR integration | Define section-by-section schema |
+
+All three approaches use the same workflow: submit a transcript, poll for completion (or use webhooks), and retrieve the generated note.
+
+---
+
+## SOAP Notes
+
+SOAP (Subjective, Objective, Assessment, Plan) is a widely-used clinical documentation format. Sully.ai includes a built-in SOAP note generator that requires no configuration.
+
+### Structure
+
+SOAP notes are organized into four sections:
+
+- **Subjective**: Patient-reported symptoms, history, and concerns
+- **Objective**: Clinical observations, vital signs, examination findings
+- **Assessment**: Diagnosis, clinical impressions, and reasoning
+- **Plan**: Treatment plan, prescriptions, follow-up instructions
+
+### When to Use
+
+- Standard clinical visits and patient encounters
+- Quick documentation without custom formatting needs
+- Getting started with Sully.ai integration
+
+### Generate a SOAP Note
+
+<CodeGroup>
+```typescript TypeScript
+import SullyAI from '@sullyai/sullyai';
+
+const client = new SullyAI();
+
+// Generate a SOAP note from a transcript
+const note = await client.notes.create({
+  transcript: "Doctor: What brings you in today? Patient: I've been having headaches for about a week now. Doctor: Can you describe the pain? Patient: It's a throbbing pain on the right side, usually in the afternoon. Doctor: Any nausea or sensitivity to light? Patient: Yes, bright lights make it worse. Doctor: Based on your symptoms, this sounds like a migraine. I'd like to start you on sumatriptan.",
+  noteType: { type: 'soap' },
+});
+
+console.log('Note ID:', note.noteId);
+```
+
+```python Python
+from sullyai import Sully
+
+client = Sully()
+
+# Generate a SOAP note from a transcript
+note = client.notes.create(
+    transcript="Doctor: What brings you in today? Patient: I've been having headaches for about a week now. Doctor: Can you describe the pain? Patient: It's a throbbing pain on the right side, usually in the afternoon. Doctor: Any nausea or sensitivity to light? Patient: Yes, bright lights make it worse. Doctor: Based on your symptoms, this sounds like a migraine. I'd like to start you on sumatriptan.",
+    note_type={"type": "soap"}
+)
+
+print(f"Note ID: {note.note_id}")
+```
+
+```bash cURL
+curl -X POST "https://api.sully.ai/v1/notes" \
+  -H "X-API-Key: ${SULLY_API_KEY}" \
+  -H "X-Account-Id: ${SULLY_ACCOUNT_ID}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transcript": "Doctor: What brings you in today? Patient: I'\''ve been having headaches for about a week now...",
+    "noteType": { "type": "soap" }
+  }'
+```
+</CodeGroup>
+
+### SOAP Note Response
+
+SOAP notes return both markdown and structured JSON formats:
+
+```json
+{
+  "data": {
+    "noteId": "note_abc123",
+    "status": "completed",
+    "payload": {
+      "markdown": "## Subjective\nPatient reports...\n\n## Objective\n...",
+      "json": {
+        "subjective": "Patient reports headaches for one week...",
+        "objective": "Alert and oriented. No focal neurological deficits...",
+        "assessment": "Migraine headache, likely without aura...",
+        "plan": "1. Start sumatriptan 50mg as needed..."
+      }
+    }
+  }
+}
+```
+
+---
+
+## Custom Note Styles
+
+If your practice uses a specific note format, you can teach Sully.ai to replicate it by providing a sample note. This approach is ideal when you have existing documentation standards you want to maintain.
+
+### When to Use
+
+- Your practice has established note formats to match
+- Specialty-specific documentation requirements
+- Migrating from another documentation system
+
+### Step 1: Create a Note Style
+
+Submit a sample note that demonstrates your preferred format:
+
+<CodeGroup>
+```typescript TypeScript
+import SullyAI from '@sullyai/sullyai';
+
+const client = new SullyAI();
+
+// Create a custom note style from a sample
+const styleResponse = await fetch('https://api.sully.ai/v1/note-styles', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': process.env.SULLY_API_KEY!,
+    'X-Account-Id': process.env.SULLY_ACCOUNT_ID!,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    sampleNote: `CHIEF COMPLAINT: Headache
+
+HISTORY OF PRESENT ILLNESS:
+- Duration: 3 days
+- Character: Throbbing, right-sided
+- Associated symptoms: Photophobia, nausea
+- Aggravating factors: Bright lights, loud noises
+- Relieving factors: Rest in dark room
+
+PHYSICAL EXAMINATION:
+Vitals: BP 120/80, HR 72, Temp 98.6F
+Neuro: Alert and oriented x3, no focal deficits
+
+ASSESSMENT:
+Migraine headache without aura
+
+PLAN:
+1. Sumatriptan 50mg PRN for acute episodes
+2. Headache diary for trigger identification
+3. Return if symptoms worsen or new neuro symptoms develop`,
+    instructions: [
+      'Use bullet points for HPI elements',
+      'Include vital signs in physical exam',
+      'Number the plan items',
+    ],
+  }),
+});
+
+const { data: { template } } = await styleResponse.json();
+console.log('Style template created');
+```
+
+```python Python
+import os
+import requests
+
+# Create a custom note style from a sample
+response = requests.post(
+    "https://api.sully.ai/v1/note-styles",
+    headers={
+        "X-API-Key": os.environ["SULLY_API_KEY"],
+        "X-Account-Id": os.environ["SULLY_ACCOUNT_ID"],
+        "Content-Type": "application/json",
+    },
+    json={
+        "sampleNote": """CHIEF COMPLAINT: Headache
+
+HISTORY OF PRESENT ILLNESS:
+- Duration: 3 days
+- Character: Throbbing, right-sided
+- Associated symptoms: Photophobia, nausea
+- Aggravating factors: Bright lights, loud noises
+- Relieving factors: Rest in dark room
+
+PHYSICAL EXAMINATION:
+Vitals: BP 120/80, HR 72, Temp 98.6F
+Neuro: Alert and oriented x3, no focal deficits
+
+ASSESSMENT:
+Migraine headache without aura
+
+PLAN:
+1. Sumatriptan 50mg PRN for acute episodes
+2. Headache diary for trigger identification
+3. Return if symptoms worsen or new neuro symptoms develop""",
+        "instructions": [
+            "Use bullet points for HPI elements",
+            "Include vital signs in physical exam",
+            "Number the plan items",
+        ],
+    },
+)
+
+template = response.json()["data"]["template"]
+print("Style template created")
+```
+
+```bash cURL
+curl -X POST "https://api.sully.ai/v1/note-styles" \
+  -H "X-API-Key: ${SULLY_API_KEY}" \
+  -H "X-Account-Id: ${SULLY_ACCOUNT_ID}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sampleNote": "CHIEF COMPLAINT: Headache\n\nHISTORY OF PRESENT ILLNESS:\n- Duration: 3 days\n- Character: Throbbing...",
+    "instructions": [
+      "Use bullet points for HPI elements",
+      "Include vital signs in physical exam"
+    ]
+  }'
+```
+</CodeGroup>
+
+### Step 2: Generate Notes Using Your Style
+
+Use the returned template when creating notes:
+
+<CodeGroup>
+```typescript TypeScript
+// Use the custom style for note generation
+const note = await client.notes.create({
+  transcript: "Patient reports headache for 3 days, throbbing quality...",
+  noteType: {
+    type: 'note_style',
+    template: template, // Template from Step 1
+  },
+});
+
+console.log('Note ID:', note.noteId);
+```
+
+```python Python
+# Use the custom style for note generation
+note = client.notes.create(
+    transcript="Patient reports headache for 3 days, throbbing quality...",
+    note_type={
+        "type": "note_style",
+        "template": template,  # Template from Step 1
+    },
+)
+
+print(f"Note ID: {note.note_id}")
+```
+
+```bash cURL
+curl -X POST "https://api.sully.ai/v1/notes" \
+  -H "X-API-Key: ${SULLY_API_KEY}" \
+  -H "X-Account-Id: ${SULLY_ACCOUNT_ID}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transcript": "Patient reports headache for 3 days...",
+    "noteType": {
+      "type": "note_style",
+      "template": { ... }
+    }
+  }'
+```
+</CodeGroup>
+
+<Tip>
+Store the template object from the style creation response. Reuse it for all notes that should follow this format.
+</Tip>
+
+---
+
+## Note Templates
+
+For maximum control over note structure, use templates. Templates let you define exactly what sections appear, their order, formatting, and content guidelines. This approach is ideal for EHR integration where consistent structured output is essential.
+
+### When to Use
+
+- EHR systems requiring specific field mappings
+- Regulatory compliance with precise formatting requirements
+- Complex multi-section documentation needs
+- When custom styles don't provide enough structural control
+
+### Template Schema
+
+A template consists of:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique identifier for the template |
+| `title` | string | Template name |
+| `global_prompt` | string | Instructions applying to the entire note |
+| `sections` | array | Ordered list of section definitions |
+
+### Section Types
+
+Templates support three section types:
+
+**Heading** - Section headers with nesting support
+```json
+{
+  "id": "heading-1",
+  "type": "heading",
+  "properties": {
+    "level": 1,
+    "text": "History of Present Illness"
+  },
+  "children": []
+}
+```
+
+**Text** - Paragraph content with tone and length controls
+```json
+{
+  "id": "hpi-content",
+  "type": "text",
+  "prompt": "Summarize the patient's presenting complaint and symptom history",
+  "properties": {
+    "detail_level": "detailed",
+    "tone": "formal",
+    "min_sentences": 2,
+    "max_sentences": 5
+  }
+}
+```
+
+**List** - Bulleted or numbered lists with item limits
+```json
+{
+  "id": "plan-items",
+  "type": "list",
+  "prompt": "List the treatment plan items discussed",
+  "properties": {
+    "list_type": "numeric",
+    "min_items": 1,
+    "max_items": 5
+  }
+}
+```
+
+### Complete Template Example
+
+<CodeGroup>
+```typescript TypeScript
+import SullyAI from '@sullyai/sullyai';
+
+const client = new SullyAI();
+
+const template = {
+  id: 'primary-care-visit',
+  title: 'Primary Care Visit Note',
+  global_prompt: 'Generate a concise, professional clinical note. Use medical terminology appropriately.',
+  sections: [
+    {
+      id: 'cc-heading',
+      type: 'heading',
+      properties: { level: 1, text: 'Chief Complaint' },
+      children: [
+        {
+          id: 'cc-content',
+          type: 'text',
+          prompt: 'State the primary reason for the visit in one sentence',
+          properties: {
+            detail_level: 'brief',
+            tone: 'formal',
+            max_sentences: 1,
+          },
+        },
+      ],
+    },
+    {
+      id: 'hpi-heading',
+      type: 'heading',
+      properties: { level: 1, text: 'History of Present Illness' },
+      children: [
+        {
+          id: 'hpi-content',
+          type: 'text',
+          prompt: 'Describe the onset, duration, character, and progression of symptoms',
+          properties: {
+            detail_level: 'detailed',
+            tone: 'formal',
+            min_sentences: 3,
+            max_sentences: 6,
+          },
+        },
+      ],
+    },
+    {
+      id: 'assessment-heading',
+      type: 'heading',
+      properties: { level: 1, text: 'Assessment' },
+      children: [
+        {
+          id: 'assessment-content',
+          type: 'text',
+          prompt: 'Provide the clinical assessment and diagnosis',
+          properties: {
+            detail_level: 'standard',
+            tone: 'formal',
+          },
+        },
+      ],
+    },
+    {
+      id: 'plan-heading',
+      type: 'heading',
+      properties: { level: 1, text: 'Plan' },
+      children: [
+        {
+          id: 'plan-items',
+          type: 'list',
+          prompt: 'List all treatment recommendations, prescriptions, and follow-up instructions',
+          properties: {
+            list_type: 'numeric',
+            min_items: 1,
+            max_items: 6,
+            detail_level: 'standard',
+          },
+        },
+      ],
+    },
+  ],
+};
+
+const note = await client.notes.create({
+  transcript: "Doctor: Good morning, what brings you in today?...",
+  noteType: {
+    type: 'note_template',
+    template: template,
+  },
+});
+
+console.log('Note ID:', note.noteId);
+```
+
+```python Python
+from sullyai import Sully
+
+client = Sully()
+
+template = {
+    "id": "primary-care-visit",
+    "title": "Primary Care Visit Note",
+    "global_prompt": "Generate a concise, professional clinical note. Use medical terminology appropriately.",
+    "sections": [
+        {
+            "id": "cc-heading",
+            "type": "heading",
+            "properties": {"level": 1, "text": "Chief Complaint"},
+            "children": [
+                {
+                    "id": "cc-content",
+                    "type": "text",
+                    "prompt": "State the primary reason for the visit in one sentence",
+                    "properties": {
+                        "detail_level": "brief",
+                        "tone": "formal",
+                        "max_sentences": 1,
+                    },
+                },
+            ],
+        },
+        {
+            "id": "hpi-heading",
+            "type": "heading",
+            "properties": {"level": 1, "text": "History of Present Illness"},
+            "children": [
+                {
+                    "id": "hpi-content",
+                    "type": "text",
+                    "prompt": "Describe the onset, duration, character, and progression of symptoms",
+                    "properties": {
+                        "detail_level": "detailed",
+                        "tone": "formal",
+                        "min_sentences": 3,
+                        "max_sentences": 6,
+                    },
+                },
+            ],
+        },
+        {
+            "id": "assessment-heading",
+            "type": "heading",
+            "properties": {"level": 1, "text": "Assessment"},
+            "children": [
+                {
+                    "id": "assessment-content",
+                    "type": "text",
+                    "prompt": "Provide the clinical assessment and diagnosis",
+                    "properties": {
+                        "detail_level": "standard",
+                        "tone": "formal",
+                    },
+                },
+            ],
+        },
+        {
+            "id": "plan-heading",
+            "type": "heading",
+            "properties": {"level": 1, "text": "Plan"},
+            "children": [
+                {
+                    "id": "plan-items",
+                    "type": "list",
+                    "prompt": "List all treatment recommendations, prescriptions, and follow-up instructions",
+                    "properties": {
+                        "list_type": "numeric",
+                        "min_items": 1,
+                        "max_items": 6,
+                        "detail_level": "standard",
+                    },
+                },
+            ],
+        },
+    ],
+}
+
+note = client.notes.create(
+    transcript="Doctor: Good morning, what brings you in today?...",
+    note_type={
+        "type": "note_template",
+        "template": template,
+    },
+)
+
+print(f"Note ID: {note.note_id}")
+```
+
+```bash cURL
+curl -X POST "https://api.sully.ai/v1/notes" \
+  -H "X-API-Key: ${SULLY_API_KEY}" \
+  -H "X-Account-Id: ${SULLY_ACCOUNT_ID}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transcript": "Doctor: Good morning, what brings you in today?...",
+    "noteType": {
+      "type": "note_template",
+      "template": {
+        "id": "primary-care-visit",
+        "title": "Primary Care Visit Note",
+        "global_prompt": "Generate a concise, professional clinical note.",
+        "sections": [...]
+      }
+    }
+  }'
+```
+</CodeGroup>
+
+For the complete template schema reference, see the [Note Template documentation](/api-reference/schemas/note-template).
+
+---
+
+## Choosing the Right Approach
+
+Use this decision guide to select the best method for your needs:
+
+| Question | Answer | Recommended Approach |
+|----------|--------|---------------------|
+| Need standard clinical format quickly? | Yes | **SOAP Notes** |
+| Have an existing note format to replicate? | Yes | **Custom Style** |
+| Need precise control over structure and fields? | Yes | **Note Template** |
+| Integrating with EHR requiring specific fields? | Yes | **Note Template** |
+| Starting fresh, no existing requirements? | Yes | **SOAP Notes** |
+
+<Tip>
+You can start with SOAP notes or custom styles and migrate to templates later as your needs evolve. Many teams begin with custom styles to match their current workflow, then create templates for EHR integration.
+</Tip>
+
+---
+
+## Polling vs Webhooks
+
+After submitting a note generation request, you need to retrieve the completed note. Sully.ai supports two patterns.
+
+### Polling
+
+Poll the notes endpoint until processing completes:
+
+<CodeGroup>
+```typescript TypeScript
+// Poll until note is ready
+let result = await client.notes.retrieve(note.noteId);
+
+while (result.status === 'processing') {
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  result = await client.notes.retrieve(note.noteId);
+}
+
+if (result.status === 'failed') {
+  throw new Error('Note generation failed');
+}
+
+console.log('Generated Note:', result.payload);
+```
+
+```python Python
+import time
+
+# Poll until note is ready
+result = client.notes.retrieve(note.note_id)
+
+while result.status == "processing":
+    time.sleep(2)
+    result = client.notes.retrieve(note.note_id)
+
+if result.status == "failed":
+    raise Exception("Note generation failed")
+
+print("Generated Note:", result.payload)
+```
+
+```bash cURL
+# Poll until complete
+while true; do
+  RESPONSE=$(curl -s "https://api.sully.ai/v1/notes/${NOTE_ID}" \
+    -H "X-API-Key: ${SULLY_API_KEY}" \
+    -H "X-Account-Id: ${SULLY_ACCOUNT_ID}")
+
+  STATUS=$(echo "${RESPONSE}" | jq -r '.data.status')
+
+  if [ "${STATUS}" = "completed" ]; then
+    echo "${RESPONSE}" | jq '.data.payload'
+    break
+  elif [ "${STATUS}" = "failed" ]; then
+    echo "Note generation failed"
+    exit 1
+  fi
+
+  sleep 2
+done
+```
+</CodeGroup>
+
+### Webhooks
+
+For production applications, webhooks provide a more efficient alternative. Instead of polling, Sully.ai sends a notification to your server when processing completes.
+
+<CodeGroup>
+```typescript TypeScript
+// Webhook handler example
+import express from 'express';
+
+const app = express();
+
+app.post('/webhook', express.json(), (req, res) => {
+  const event = req.body;
+
+  if (event.type === 'note.completed') {
+    const note = event.data;
+    console.log('Note ready:', note.noteId);
+    // Process the completed note
+  }
+
+  res.status(200).send('OK');
+});
+```
+
+```python Python
+from flask import Flask, request
+
+app = Flask(__name__)
+
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    event = request.json
+
+    if event["type"] == "note.completed":
+        note = event["data"]
+        print(f"Note ready: {note['noteId']}")
+        # Process the completed note
+
+    return "OK", 200
+```
+</CodeGroup>
+
+For complete webhook setup including signature verification, see the [Webhooks guide](/api-reference/events/webhooks).
+
+| Method | Best For |
+|--------|----------|
+| **Polling** | Simple integrations, testing, low volume |
+| **Webhooks** | Production applications, high volume, real-time updates |
+
+---
+
+## Adding Context
+
+Improve note quality by providing additional context when creating notes. This helps Sully.ai generate more accurate and complete documentation.
+
+```typescript
+const note = await client.notes.create({
+  transcript: "...",
+  noteType: { type: 'soap' },
+
+  // Optional context fields
+  date: '2024-01-15',
+  patientInfo: {
+    name: 'Jane Doe',
+    dateOfBirth: '1985-03-22',
+    gender: 'female',
+  },
+  medicationList: [
+    'Lisinopril 10mg daily',
+    'Metformin 500mg twice daily',
+  ],
+  previousNote: 'Previous visit note content for follow-ups...',
+  instructions: 'Focus on cardiovascular symptoms',
+  context: 'Annual wellness visit, patient has history of hypertension',
+});
+```
+
+For a complete list of context fields and their effects, see the [Create Note API reference](/api-reference/notes/create).
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Note Template Schema"
+    icon="file-code"
+    href="/api-reference/schemas/note-template"
+  >
+    Complete reference for template section types and properties
+  </Card>
+  <Card
+    title="Webhooks"
+    icon="bell"
+    href="/api-reference/events/webhooks"
+  >
+    Set up real-time notifications for completed notes
+  </Card>
+  <Card
+    title="Audio Transcription"
+    icon="microphone"
+    href="/documentation/notes#1-transcribe-audio"
+  >
+    Learn about uploading and streaming audio for transcription
+  </Card>
+  <Card
+    title="API Reference"
+    icon="book"
+    href="/api-reference/notes/create"
+  >
+    Full Create Note API documentation
+  </Card>
+</CardGroup>
