@@ -1,0 +1,1040 @@
+---
+title: 'Webhooks'
+description: 'Receive real-time notifications for async events in your Sully.ai integration'
+---
+
+Webhooks provide real-time notifications when events occur in your Sully.ai account, enabling you to build responsive integrations without constantly polling the API.
+
+## Overview
+
+### Why Webhooks vs Polling
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| **Webhooks** | Real-time notifications, no wasted API calls, scales efficiently | Requires public HTTPS endpoint, more complex setup |
+| **Polling** | Simple to implement, works behind firewalls | Delayed updates, wastes API quota, doesn't scale well |
+
+### When to Use Webhooks
+
+Use webhooks when you need:
+
+- **Real-time updates** - React to events as they happen
+- **Scalable architecture** - Handle thousands of concurrent operations
+- **Efficient resource usage** - Eliminate unnecessary API calls
+- **Production systems** - Build reliable, event-driven workflows
+
+<Tip>
+For development and testing, polling is often simpler. Switch to webhooks when you're ready for production.
+</Tip>
+
+## Setup
+
+### 1. Configure Your Webhook URL
+
+Configure your webhook endpoint in the [Sully Dashboard](https://dashboard.sully.ai/settings/webhooks).
+
+**Requirements:**
+- URL must use **HTTPS** (HTTP endpoints are rejected)
+- Endpoint must be publicly accessible
+- Must respond with **2xx status code** within 30 seconds
+
+### 2. Obtain Your Signing Secret
+
+After configuring your webhook URL, you'll receive a signing secret. Store this securely - you'll need it to verify incoming webhook signatures.
+
+```bash
+export SULLY_WEBHOOK_SECRET="whsec_your_signing_secret_here"
+```
+
+<Warning>
+Never expose your webhook signing secret in client-side code, public repositories, or logs.
+</Warning>
+
+## Event Types
+
+Sully.ai sends webhook events for transcription, note generation, and medical coding operations.
+
+### audio_transcription.succeeded
+
+Triggered when an audio transcription completes successfully.
+
+```json
+{
+  "type": "audio_transcription.succeeded",
+  "data": {
+    "transcriptionId": "txn_abc123def456",
+    "status": "completed",
+    "payload": {
+      "transcription": "Doctor: Good morning. How are you feeling today?\nPatient: I've been having headaches for about a week now..."
+    }
+  }
+}
+```
+
+### audio_transcription.failed
+
+Triggered when an audio transcription fails.
+
+```json
+{
+  "type": "audio_transcription.failed",
+  "data": {
+    "transcriptionId": "txn_abc123def456",
+    "status": "failed",
+    "error": "Audio file format not supported"
+  }
+}
+```
+
+### note_generation.succeeded
+
+Triggered when a clinical note is generated successfully.
+
+```json
+{
+  "type": "note_generation.succeeded",
+  "data": {
+    "id": "note_xyz789ghi012",
+    "status": "completed",
+    "payload": {
+      "json": {
+        "subjective": {
+          "chiefComplaint": "Headaches for one week",
+          "historyOfPresentIllness": "Patient reports persistent headaches..."
+        },
+        "objective": {
+          "vitalSigns": "BP 120/80, HR 72, Temp 98.6F"
+        },
+        "assessment": "Tension-type headache",
+        "plan": "OTC analgesics, stress management, follow-up in 2 weeks"
+      },
+      "markdown": "## Subjective\n\n### Chief Complaint\nHeadaches for one week\n\n..."
+    },
+    "timestamp": {
+      "start": 1706123456789,
+      "complete": 1706123459123
+    }
+  }
+}
+```
+
+### note_generation.failed
+
+Triggered when note generation fails.
+
+```json
+{
+  "type": "note_generation.failed",
+  "data": {
+    "id": "note_xyz789ghi012",
+    "status": "failed",
+    "timestamp": {
+      "start": 1706123456789,
+      "complete": 1706123458000
+    }
+  }
+}
+```
+
+### coding.succeeded
+
+Triggered when medical coding completes successfully.
+
+```json
+{
+  "type": "coding.succeeded",
+  "data": {
+    "id": "cod_mno345pqr678",
+    "status": "completed",
+    "created_at": "2024-01-24T15:30:00Z",
+    "updated_at": "2024-01-24T15:30:05Z",
+    "result": {
+      "diagnoses": [
+        {
+          "id": "diag_001",
+          "code": {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/sid/icd-10-cm",
+                "code": "G43.909",
+                "display": "Migraine, unspecified, not intractable"
+              },
+              {
+                "system": "http://snomed.info/sct",
+                "code": "37796009",
+                "display": "Migraine"
+              }
+            ],
+            "text": "Migraine headache"
+          },
+          "text_span": {
+            "start_char": 45,
+            "end_char": 62,
+            "text": "migraine headache"
+          }
+        }
+      ],
+      "procedures": [
+        {
+          "id": "proc_001",
+          "code": {
+            "coding": [
+              {
+                "system": "http://www.ama-assn.org/go/cpt",
+                "code": "99213",
+                "display": "Office visit, established patient, low complexity"
+              }
+            ],
+            "text": "Office visit"
+          },
+          "text_span": {
+            "start_char": 0,
+            "end_char": 15,
+            "text": "follow-up visit"
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+### coding.failed
+
+Triggered when medical coding fails.
+
+```json
+{
+  "type": "coding.failed",
+  "data": {
+    "id": "cod_mno345pqr678",
+    "status": "failed",
+    "error": "Insufficient clinical information for coding"
+  }
+}
+```
+
+## Signature Verification
+
+<Warning>
+**Critical Security Requirement**: Always verify webhook signatures before processing events. This prevents attackers from sending forged webhook payloads to your endpoint.
+</Warning>
+
+Every webhook request includes an `x-sully-signature` header containing a timestamp and HMAC signature:
+
+```
+x-sully-signature: t=1706123456,v1=5257a869e7ecebeda32affa62cdca3fa51cad7e77a0e56ff536d0ce8e108d8bd
+```
+
+### Signature Components
+
+| Component | Description |
+|-----------|-------------|
+| `t` | Unix timestamp when the request was signed |
+| `v1` | HMAC-SHA256 signature of the payload |
+
+### Verification Steps
+
+1. **Extract** the timestamp and signature from the header
+2. **Construct** the signed payload: `{timestamp}.{raw_body}`
+3. **Compute** HMAC-SHA256 using your webhook secret
+4. **Compare** signatures using constant-time comparison
+5. **Validate** timestamp is within tolerance (default: 5 minutes)
+
+### Complete Verification Implementation
+
+<CodeGroup>
+```typescript TypeScript
+import * as crypto from 'crypto';
+
+interface SignatureComponents {
+  timestamp: string;
+  signature: string;
+}
+
+/**
+ * Parse the x-sully-signature header into its components
+ */
+function parseSignatureHeader(header: string): SignatureComponents {
+  const parts = header.split(',').reduce(
+    (acc, part) => {
+      const [key, value] = part.split('=');
+      if (key && value) {
+        acc[key.trim()] = value.trim();
+      }
+      return acc;
+    },
+    {} as Record<string, string>
+  );
+
+  if (!parts.t || !parts.v1) {
+    throw new Error('Invalid signature header format');
+  }
+
+  return { timestamp: parts.t, signature: parts.v1 };
+}
+
+/**
+ * Construct the signed payload string
+ */
+function createSignedPayload(timestamp: string, body: string): string {
+  return `${timestamp}.${body}`;
+}
+
+/**
+ * Compute the expected HMAC-SHA256 signature
+ */
+function computeSignature(secret: string, payload: string): string {
+  return crypto.createHmac('sha256', secret).update(payload, 'utf8').digest('hex');
+}
+
+/**
+ * Verify webhook signature and timestamp
+ * @param header - The x-sully-signature header value
+ * @param body - The raw request body (unparsed string)
+ * @param secret - Your webhook signing secret
+ * @param toleranceInSeconds - Maximum age of the request in seconds (default: 300)
+ * @returns true if the signature is valid and timestamp is within tolerance
+ */
+function isValidSignature(
+  header: string,
+  body: string,
+  secret: string,
+  toleranceInSeconds = 300
+): boolean {
+  try {
+    const { timestamp, signature } = parseSignatureHeader(header);
+
+    // Validate timestamp is within tolerance
+    const currentTime = Math.floor(Date.now() / 1000);
+    const requestTime = parseInt(timestamp, 10);
+
+    if (Math.abs(currentTime - requestTime) > toleranceInSeconds) {
+      console.error('Webhook timestamp outside tolerance window');
+      return false;
+    }
+
+    // Compute expected signature
+    const signedPayload = createSignedPayload(timestamp, body);
+    const expectedSignature = computeSignature(secret, signedPayload);
+
+    // Constant-time comparison to prevent timing attacks
+    const signatureBuffer = Buffer.from(signature, 'hex');
+    const expectedBuffer = Buffer.from(expectedSignature, 'hex');
+
+    if (signatureBuffer.length !== expectedBuffer.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
+  } catch (error) {
+    console.error('Signature verification failed:', error);
+    return false;
+  }
+}
+
+export { isValidSignature, parseSignatureHeader };
+```
+
+```python Python
+import hmac
+import hashlib
+import time
+from typing import Tuple, Optional
+
+def parse_signature_header(header: str) -> Tuple[str, str]:
+    """
+    Parse the x-sully-signature header into timestamp and signature.
+
+    Args:
+        header: The x-sully-signature header value
+
+    Returns:
+        Tuple of (timestamp, signature)
+
+    Raises:
+        ValueError: If header format is invalid
+    """
+    parts = {}
+    for part in header.split(','):
+        if '=' in part:
+            key, value = part.split('=', 1)
+            parts[key.strip()] = value.strip()
+
+    if 't' not in parts or 'v1' not in parts:
+        raise ValueError('Invalid signature header format')
+
+    return parts['t'], parts['v1']
+
+
+def compute_signature(secret: str, payload: str) -> str:
+    """
+    Compute HMAC-SHA256 signature for the payload.
+
+    Args:
+        secret: Your webhook signing secret
+        payload: The signed payload string
+
+    Returns:
+        Hex-encoded signature
+    """
+    return hmac.new(
+        secret.encode('utf-8'),
+        payload.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+
+
+def is_valid_signature(
+    header: str,
+    body: str,
+    secret: str,
+    tolerance_seconds: int = 300
+) -> bool:
+    """
+    Verify webhook signature and timestamp.
+
+    Args:
+        header: The x-sully-signature header value
+        body: The raw request body (unparsed string)
+        secret: Your webhook signing secret
+        tolerance_seconds: Maximum age of request in seconds (default: 300)
+
+    Returns:
+        True if signature is valid and timestamp is within tolerance
+    """
+    try:
+        timestamp, signature = parse_signature_header(header)
+
+        # Validate timestamp is within tolerance
+        current_time = int(time.time())
+        request_time = int(timestamp)
+
+        if abs(current_time - request_time) > tolerance_seconds:
+            print('Webhook timestamp outside tolerance window')
+            return False
+
+        # Compute expected signature
+        signed_payload = f"{timestamp}.{body}"
+        expected_signature = compute_signature(secret, signed_payload)
+
+        # Constant-time comparison to prevent timing attacks
+        return hmac.compare_digest(signature, expected_signature)
+
+    except Exception as e:
+        print(f'Signature verification failed: {e}')
+        return False
+```
+</CodeGroup>
+
+## Handling Events
+
+### Idempotency
+
+Events may be delivered more than once. Use the event type and resource ID to deduplicate:
+
+```typescript
+const processedEvents = new Set<string>();
+
+function handleEvent(event: WebhookEvent): void {
+  // Create a unique key from event type and resource ID
+  const eventKey = `${event.type}:${getResourceId(event)}`;
+
+  if (processedEvents.has(eventKey)) {
+    console.log('Duplicate event, skipping:', eventKey);
+    return;
+  }
+
+  processedEvents.add(eventKey);
+  // Process the event...
+}
+
+function getResourceId(event: WebhookEvent): string {
+  switch (event.type) {
+    case 'audio_transcription.succeeded':
+    case 'audio_transcription.failed':
+      return event.data.transcriptionId;
+    case 'note_generation.succeeded':
+    case 'note_generation.failed':
+      return event.data.id;
+    case 'coding.succeeded':
+    case 'coding.failed':
+      return event.data.id;
+    default:
+      return 'unknown';
+  }
+}
+```
+
+<Note>
+For production systems, use a persistent store (Redis, database) instead of in-memory sets to handle deduplication across server restarts and multiple instances.
+</Note>
+
+### Event Ordering
+
+Events may arrive out of order. Design your handlers to be order-independent or use timestamps to determine event sequence:
+
+```typescript
+// Use timestamps to handle out-of-order events
+interface ResourceState {
+  lastUpdated: number;
+  status: string;
+}
+
+const resourceStates = new Map<string, ResourceState>();
+
+function handleNoteEvent(event: NoteEvent): void {
+  const resourceId = event.data.id;
+  const eventTime = event.data.timestamp?.complete || Date.now();
+
+  const currentState = resourceStates.get(resourceId);
+
+  // Only process if this event is newer than what we've seen
+  if (currentState && currentState.lastUpdated > eventTime) {
+    console.log('Stale event, skipping');
+    return;
+  }
+
+  resourceStates.set(resourceId, {
+    lastUpdated: eventTime,
+    status: event.data.status,
+  });
+
+  // Process the event...
+}
+```
+
+### Response Requirements
+
+Your webhook endpoint must:
+
+1. **Respond quickly** - Return within 30 seconds
+2. **Return 2xx status** - Even if processing fails internally
+3. **Process asynchronously** - Queue events for background processing if needed
+
+```typescript
+// Good: Quick response, async processing
+app.post('/webhook', async (req, res) => {
+  // Verify signature first
+  if (!isValidSignature(signatureHeader, rawBody, secret)) {
+    return res.status(403).send('Invalid signature');
+  }
+
+  // Queue for async processing
+  await eventQueue.add(JSON.parse(rawBody));
+
+  // Return immediately
+  res.status(200).send('OK');
+});
+```
+
+### Retry Behavior
+
+If your endpoint returns a non-2xx status or times out, Sully.ai will retry the webhook:
+
+- **Retry schedule**: Exponential backoff over 24 hours
+- **Max retries**: 5 attempts
+- **Best practice**: Return 2xx and handle failures internally
+
+## Production Webhook Handler
+
+Complete Express.js example with all best practices:
+
+<CodeGroup>
+```typescript TypeScript (Express)
+import express, { Request, Response } from 'express';
+import * as crypto from 'crypto';
+
+const app = express();
+
+// IMPORTANT: Use raw body for signature verification
+app.use('/webhook', express.text({ type: '*/*' }));
+
+const WEBHOOK_SECRET = process.env.SULLY_WEBHOOK_SECRET!;
+
+// --- Signature Verification ---
+
+interface SignatureComponents {
+  timestamp: string;
+  signature: string;
+}
+
+function parseSignatureHeader(header: string): SignatureComponents {
+  const parts = header.split(',').reduce(
+    (acc, part) => {
+      const [key, value] = part.split('=');
+      if (key && value) {
+        acc[key.trim()] = value.trim();
+      }
+      return acc;
+    },
+    {} as Record<string, string>
+  );
+
+  if (!parts.t || !parts.v1) {
+    throw new Error('Invalid signature header format');
+  }
+
+  return { timestamp: parts.t, signature: parts.v1 };
+}
+
+function isValidSignature(
+  header: string,
+  body: string,
+  secret: string,
+  toleranceInSeconds = 300
+): boolean {
+  try {
+    const { timestamp, signature } = parseSignatureHeader(header);
+
+    const currentTime = Math.floor(Date.now() / 1000);
+    if (Math.abs(currentTime - parseInt(timestamp, 10)) > toleranceInSeconds) {
+      return false;
+    }
+
+    const signedPayload = `${timestamp}.${body}`;
+    const expectedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(signedPayload, 'utf8')
+      .digest('hex');
+
+    return crypto.timingSafeEqual(
+      Buffer.from(signature, 'hex'),
+      Buffer.from(expectedSignature, 'hex')
+    );
+  } catch {
+    return false;
+  }
+}
+
+// --- Event Types ---
+
+interface TranscriptionSucceededEvent {
+  type: 'audio_transcription.succeeded';
+  data: {
+    transcriptionId: string;
+    status: string;
+    payload: { transcription: string };
+  };
+}
+
+interface TranscriptionFailedEvent {
+  type: 'audio_transcription.failed';
+  data: {
+    transcriptionId: string;
+    status: string;
+    error: string;
+  };
+}
+
+interface NoteSucceededEvent {
+  type: 'note_generation.succeeded';
+  data: {
+    id: string;
+    status: string;
+    payload: { json: object; markdown: string };
+    timestamp: { start: number; complete: number };
+  };
+}
+
+interface NoteFailedEvent {
+  type: 'note_generation.failed';
+  data: {
+    id: string;
+    status: string;
+    timestamp: { start: number; complete: number };
+  };
+}
+
+interface CodingSucceededEvent {
+  type: 'coding.succeeded';
+  data: {
+    id: string;
+    status: string;
+    created_at: string;
+    updated_at: string;
+    result: { diagnoses: object[]; procedures: object[] };
+  };
+}
+
+interface CodingFailedEvent {
+  type: 'coding.failed';
+  data: {
+    id: string;
+    status: string;
+    error: string;
+  };
+}
+
+type WebhookEvent =
+  | TranscriptionSucceededEvent
+  | TranscriptionFailedEvent
+  | NoteSucceededEvent
+  | NoteFailedEvent
+  | CodingSucceededEvent
+  | CodingFailedEvent;
+
+// --- Event Handlers ---
+
+async function handleTranscriptionSucceeded(
+  data: TranscriptionSucceededEvent['data']
+): Promise<void> {
+  console.log(`Transcription ${data.transcriptionId} completed`);
+  // Store transcription, trigger note generation, notify user, etc.
+}
+
+async function handleTranscriptionFailed(
+  data: TranscriptionFailedEvent['data']
+): Promise<void> {
+  console.error(`Transcription ${data.transcriptionId} failed: ${data.error}`);
+  // Alert monitoring, notify user, trigger retry logic, etc.
+}
+
+async function handleNoteSucceeded(
+  data: NoteSucceededEvent['data']
+): Promise<void> {
+  console.log(`Note ${data.id} generated successfully`);
+  // Store note, update UI, send to EHR, etc.
+}
+
+async function handleNoteFailed(data: NoteFailedEvent['data']): Promise<void> {
+  console.error(`Note ${data.id} generation failed`);
+  // Alert monitoring, notify user, etc.
+}
+
+async function handleCodingSucceeded(
+  data: CodingSucceededEvent['data']
+): Promise<void> {
+  console.log(`Coding ${data.id} completed with ${data.result.diagnoses.length} diagnoses`);
+  // Store codes, update billing system, etc.
+}
+
+async function handleCodingFailed(
+  data: CodingFailedEvent['data']
+): Promise<void> {
+  console.error(`Coding ${data.id} failed: ${data.error}`);
+  // Alert monitoring, queue for manual review, etc.
+}
+
+// --- Webhook Endpoint ---
+
+app.post('/webhook', async (req: Request, res: Response) => {
+  const signatureHeader = req.headers['x-sully-signature'] as string;
+  const rawBody = req.body as string;
+
+  // 1. Verify signature header exists
+  if (!signatureHeader) {
+    console.error('Missing x-sully-signature header');
+    return res.status(400).send('Missing signature header');
+  }
+
+  // 2. Verify signature is valid
+  if (!isValidSignature(signatureHeader, rawBody, WEBHOOK_SECRET)) {
+    console.error('Invalid webhook signature');
+    return res.status(403).send('Invalid signature');
+  }
+
+  // 3. Parse the event
+  let event: WebhookEvent;
+  try {
+    event = JSON.parse(rawBody);
+  } catch {
+    console.error('Failed to parse webhook body');
+    return res.status(400).send('Invalid JSON');
+  }
+
+  // 4. Handle the event by type
+  try {
+    switch (event.type) {
+      case 'audio_transcription.succeeded':
+        await handleTranscriptionSucceeded(event.data);
+        break;
+
+      case 'audio_transcription.failed':
+        await handleTranscriptionFailed(event.data);
+        break;
+
+      case 'note_generation.succeeded':
+        await handleNoteSucceeded(event.data);
+        break;
+
+      case 'note_generation.failed':
+        await handleNoteFailed(event.data);
+        break;
+
+      case 'coding.succeeded':
+        await handleCodingSucceeded(event.data);
+        break;
+
+      case 'coding.failed':
+        await handleCodingFailed(event.data);
+        break;
+
+      default:
+        console.log('Unhandled event type:', (event as { type: string }).type);
+    }
+  } catch (error) {
+    // Log the error but still return 200 to prevent retries
+    console.error('Error processing webhook:', error);
+  }
+
+  // 5. Always return 200 to acknowledge receipt
+  res.status(200).send('OK');
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Webhook server running on port ${PORT}`);
+});
+```
+
+```python Python (Flask)
+import os
+import hmac
+import hashlib
+import time
+import json
+from flask import Flask, request, Response
+
+app = Flask(__name__)
+
+WEBHOOK_SECRET = os.environ['SULLY_WEBHOOK_SECRET']
+
+
+def parse_signature_header(header: str) -> tuple[str, str]:
+    """Parse the x-sully-signature header."""
+    parts = {}
+    for part in header.split(','):
+        if '=' in part:
+            key, value = part.split('=', 1)
+            parts[key.strip()] = value.strip()
+
+    if 't' not in parts or 'v1' not in parts:
+        raise ValueError('Invalid signature header format')
+
+    return parts['t'], parts['v1']
+
+
+def is_valid_signature(
+    header: str,
+    body: str,
+    secret: str,
+    tolerance_seconds: int = 300
+) -> bool:
+    """Verify webhook signature and timestamp."""
+    try:
+        timestamp, signature = parse_signature_header(header)
+
+        current_time = int(time.time())
+        if abs(current_time - int(timestamp)) > tolerance_seconds:
+            return False
+
+        signed_payload = f"{timestamp}.{body}"
+        expected_signature = hmac.new(
+            secret.encode('utf-8'),
+            signed_payload.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+
+        return hmac.compare_digest(signature, expected_signature)
+    except Exception as e:
+        print(f'Signature verification failed: {e}')
+        return False
+
+
+# Event handlers
+def handle_transcription_succeeded(data: dict) -> None:
+    print(f"Transcription {data['transcriptionId']} completed")
+    # Store transcription, trigger note generation, etc.
+
+
+def handle_transcription_failed(data: dict) -> None:
+    print(f"Transcription {data['transcriptionId']} failed: {data.get('error')}")
+    # Alert monitoring, notify user, etc.
+
+
+def handle_note_succeeded(data: dict) -> None:
+    print(f"Note {data['id']} generated successfully")
+    # Store note, update UI, send to EHR, etc.
+
+
+def handle_note_failed(data: dict) -> None:
+    print(f"Note {data['id']} generation failed")
+    # Alert monitoring, notify user, etc.
+
+
+def handle_coding_succeeded(data: dict) -> None:
+    diagnoses_count = len(data.get('result', {}).get('diagnoses', []))
+    print(f"Coding {data['id']} completed with {diagnoses_count} diagnoses")
+    # Store codes, update billing system, etc.
+
+
+def handle_coding_failed(data: dict) -> None:
+    print(f"Coding {data['id']} failed: {data.get('error')}")
+    # Alert monitoring, queue for manual review, etc.
+
+
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    signature_header = request.headers.get('x-sully-signature')
+    raw_body = request.get_data(as_text=True)
+
+    # 1. Verify signature header exists
+    if not signature_header:
+        print('Missing x-sully-signature header')
+        return Response('Missing signature header', status=400)
+
+    # 2. Verify signature is valid
+    if not is_valid_signature(signature_header, raw_body, WEBHOOK_SECRET):
+        print('Invalid webhook signature')
+        return Response('Invalid signature', status=403)
+
+    # 3. Parse the event
+    try:
+        event = json.loads(raw_body)
+    except json.JSONDecodeError:
+        print('Failed to parse webhook body')
+        return Response('Invalid JSON', status=400)
+
+    # 4. Handle the event by type
+    event_type = event.get('type')
+    data = event.get('data', {})
+
+    try:
+        handlers = {
+            'audio_transcription.succeeded': handle_transcription_succeeded,
+            'audio_transcription.failed': handle_transcription_failed,
+            'note_generation.succeeded': handle_note_succeeded,
+            'note_generation.failed': handle_note_failed,
+            'coding.succeeded': handle_coding_succeeded,
+            'coding.failed': handle_coding_failed,
+        }
+
+        handler = handlers.get(event_type)
+        if handler:
+            handler(data)
+        else:
+            print(f'Unhandled event type: {event_type}')
+
+    except Exception as e:
+        # Log error but still return 200 to prevent retries
+        print(f'Error processing webhook: {e}')
+
+    # 5. Always return 200 to acknowledge receipt
+    return Response('OK', status=200)
+
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 3000))
+    app.run(host='0.0.0.0', port=port)
+```
+</CodeGroup>
+
+## Testing Webhooks
+
+### Local Development with ngrok
+
+Use [ngrok](https://ngrok.com) to expose your local server to the internet:
+
+```bash
+# Start your local webhook server
+npm run dev  # Runs on http://localhost:3000
+
+# In another terminal, create a tunnel
+ngrok http 3000
+```
+
+ngrok will provide a public URL like `https://abc123.ngrok.io`. Configure this URL in your Sully Dashboard as your webhook endpoint.
+
+### Verify Signature Handling
+
+Test that your signature verification works correctly:
+
+```typescript
+import * as crypto from 'crypto';
+
+function generateTestWebhook(secret: string, payload: object): {
+  body: string;
+  signature: string;
+} {
+  const body = JSON.stringify(payload);
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const signedPayload = `${timestamp}.${body}`;
+
+  const signature = crypto
+    .createHmac('sha256', secret)
+    .update(signedPayload, 'utf8')
+    .digest('hex');
+
+  return {
+    body,
+    signature: `t=${timestamp},v1=${signature}`,
+  };
+}
+
+// Generate a test webhook
+const testPayload = {
+  type: 'note_generation.succeeded',
+  data: {
+    id: 'note_test123',
+    status: 'completed',
+    payload: {
+      json: { subjective: { chiefComplaint: 'Test' } },
+      markdown: '## Test Note',
+    },
+    timestamp: { start: Date.now(), complete: Date.now() },
+  },
+};
+
+const { body, signature } = generateTestWebhook('your_test_secret', testPayload);
+
+console.log('Test with curl:');
+console.log(`curl -X POST http://localhost:3000/webhook \\
+  -H "Content-Type: application/json" \\
+  -H "x-sully-signature: ${signature}" \\
+  -d '${body}'`);
+```
+
+### Testing Checklist
+
+Before going to production, verify:
+
+- [ ] Signature verification rejects invalid signatures
+- [ ] Signature verification rejects expired timestamps
+- [ ] All event types are handled correctly
+- [ ] Duplicate events are handled idempotently
+- [ ] Handler errors don't cause 5xx responses
+- [ ] Response time is under 30 seconds
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Events Overview"
+    icon="bell"
+    href="/api-reference/events/overview"
+  >
+    Detailed reference for all webhook event types and payloads
+  </Card>
+  <Card
+    title="Webhook Security"
+    icon="shield-check"
+    href="/api-reference/events/webhooks"
+  >
+    Deep dive into signature verification and security best practices
+  </Card>
+  <Card
+    title="Notes Guide"
+    icon="file-medical"
+    href="/documentation/notes"
+  >
+    Learn how to generate clinical notes that trigger webhook events
+  </Card>
+  <Card
+    title="TypeScript SDK"
+    icon="js"
+    href="/documentation/sdks/typescript"
+  >
+    Use the official SDK for type-safe API interactions
+  </Card>
+</CardGroup>
