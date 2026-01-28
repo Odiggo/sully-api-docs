@@ -1,0 +1,480 @@
+---
+title: 'Medical Consensus'
+description: 'Get expert medical opinions on clinical queries using AI-powered analysis'
+---
+
+The Medical Consensus API enables you to submit clinical queries and receive comprehensive medical opinions synthesized from multiple expert sources. This feature is useful for validating diagnoses, exploring treatment options, and getting second opinions on complex cases.
+
+<Warning>
+  **Alpha Feature**: Medical Consensus is an experimental feature. It may change without notice, has different rate limits than stable endpoints, and does not include SLA guarantees. Do not use in production without careful consideration.
+</Warning>
+
+## Overview
+
+Medical Consensus helps clinicians with:
+
+- **Second Opinions**: Get AI-synthesized expert perspectives on clinical cases
+- **Diagnosis Validation**: Confirm or explore differential diagnoses
+- **Treatment Options**: Review current guidelines and treatment approaches
+- **Drug Interactions**: Understand potential medication interactions
+
+The API is asynchronous. You submit a query, receive a request ID, then poll for results when processing completes.
+
+---
+
+## Authentication
+
+Alpha endpoints use Bearer token authentication, which differs from the header-based authentication used by stable API endpoints.
+
+```bash
+Authorization: Bearer YOUR_API_KEY
+```
+
+<Note>
+  You use the same API key for both stable and alpha endpoints. Only the authentication header format differs. Get your API key from [dashboard.api.sully.ai](https://dashboard.api.sully.ai).
+</Note>
+
+---
+
+## Creating a Request
+
+Submit a clinical query to the consensus endpoint. The API returns immediately with a request ID while processing happens asynchronously.
+
+### Endpoint
+
+```
+POST /alpha/consensus
+```
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `query` | string | Yes | Your clinical question or scenario |
+
+### Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data.id` | string | Unique identifier for the consensus request |
+| `data.status` | string | Initial status (always `pending`) |
+| `data.created_at` | string | Timestamp when the request was created (ISO 8601) |
+
+### Code Examples
+
+<CodeGroup>
+```typescript TypeScript
+const response = await fetch('https://api.sully.ai/alpha/consensus', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${process.env.SULLY_API_KEY}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    query: "What are the differential diagnoses for a 45-year-old patient presenting with chest pain, shortness of breath, and elevated troponin levels?"
+  })
+});
+
+const { data } = await response.json();
+console.log('Consensus ID:', data.id);
+console.log('Status:', data.status); // "pending"
+```
+
+```python Python
+import os
+import requests
+
+url = "https://api.sully.ai/alpha/consensus"
+headers = {
+    "Authorization": f"Bearer {os.environ['SULLY_API_KEY']}",
+    "Content-Type": "application/json"
+}
+payload = {
+    "query": "What are the differential diagnoses for a 45-year-old patient presenting with chest pain, shortness of breath, and elevated troponin levels?"
+}
+
+response = requests.post(url, headers=headers, json=payload)
+data = response.json()["data"]
+
+print(f"Consensus ID: {data['id']}")
+print(f"Status: {data['status']}")  # "pending"
+```
+
+```bash cURL
+curl -X POST "https://api.sully.ai/alpha/consensus" \
+  -H "Authorization: Bearer ${SULLY_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What are the differential diagnoses for a 45-year-old patient presenting with chest pain, shortness of breath, and elevated troponin levels?"
+  }'
+```
+</CodeGroup>
+
+### Response Example
+
+```json
+{
+  "data": {
+    "id": "consensus_abc123def456",
+    "status": "pending",
+    "created_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+---
+
+## Polling for Results
+
+After creating a request, poll the GET endpoint to check status and retrieve results when processing completes.
+
+### Endpoint
+
+```
+GET /alpha/consensus/{id}
+```
+
+### Status Flow
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Request received, queued for processing |
+| `processing` | Actively analyzing your clinical query |
+| `completed` | Analysis complete, results available in `result.consensus_response` |
+| `failed` | Processing failed, error details in `result.error` |
+
+### Polling Example
+
+<CodeGroup>
+```typescript TypeScript
+async function waitForConsensus(consensusId: string): Promise<string> {
+  const headers = {
+    'Authorization': `Bearer ${process.env.SULLY_API_KEY}`
+  };
+
+  while (true) {
+    const response = await fetch(
+      `https://api.sully.ai/alpha/consensus/${consensusId}`,
+      { headers }
+    );
+    const { data } = await response.json();
+
+    if (data.status === 'completed') {
+      return data.result.consensus_response;
+    }
+
+    if (data.status === 'failed') {
+      throw new Error(data.result?.error || 'Consensus processing failed');
+    }
+
+    // Wait 5 seconds before polling again
+    await new Promise(resolve => setTimeout(resolve, 5000));
+  }
+}
+
+// Usage
+const consensusId = 'consensus_abc123def456';
+const result = await waitForConsensus(consensusId);
+console.log('Medical Consensus:', result);
+```
+
+```python Python
+import os
+import time
+import requests
+
+def wait_for_consensus(consensus_id: str) -> str:
+    headers = {
+        "Authorization": f"Bearer {os.environ['SULLY_API_KEY']}"
+    }
+    url = f"https://api.sully.ai/alpha/consensus/{consensus_id}"
+
+    while True:
+        response = requests.get(url, headers=headers)
+        data = response.json()["data"]
+
+        if data["status"] == "completed":
+            return data["result"]["consensus_response"]
+
+        if data["status"] == "failed":
+            error = data.get("result", {}).get("error", "Consensus processing failed")
+            raise Exception(error)
+
+        # Wait 5 seconds before polling again
+        time.sleep(5)
+
+# Usage
+consensus_id = "consensus_abc123def456"
+result = wait_for_consensus(consensus_id)
+print(f"Medical Consensus: {result}")
+```
+
+```bash cURL
+# Poll until complete
+CONSENSUS_ID="consensus_abc123def456"
+
+while true; do
+  RESPONSE=$(curl -s "https://api.sully.ai/alpha/consensus/${CONSENSUS_ID}" \
+    -H "Authorization: Bearer ${SULLY_API_KEY}")
+
+  STATUS=$(echo "${RESPONSE}" | jq -r '.data.status')
+
+  if [ "${STATUS}" = "completed" ]; then
+    echo "${RESPONSE}" | jq -r '.data.result.consensus_response'
+    break
+  elif [ "${STATUS}" = "failed" ]; then
+    echo "Error: $(echo ${RESPONSE} | jq -r '.data.result.error')"
+    exit 1
+  fi
+
+  echo "Status: ${STATUS}, waiting..."
+  sleep 5
+done
+```
+</CodeGroup>
+
+---
+
+## Understanding Results
+
+When a consensus request completes, the response includes the full request details and result.
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data.id` | string | Unique identifier for the request |
+| `data.status` | string | Current status: `pending`, `processing`, `completed`, or `failed` |
+| `data.created_at` | string | Timestamp when request was created |
+| `data.updated_at` | string | Timestamp when request was last updated |
+| `data.result.consensus_response` | string | The medical consensus text (when `completed`) |
+| `data.result.error` | string | Error message (when `failed`) |
+
+### Completed Response Example
+
+```json
+{
+  "data": {
+    "id": "consensus_abc123def456",
+    "status": "completed",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:35:00Z",
+    "result": {
+      "consensus_response": "Based on the clinical presentation of chest pain, shortness of breath, and elevated troponin levels in a 45-year-old patient, the most likely diagnosis is acute myocardial infarction (AMI). However, several differential diagnoses should be considered including pulmonary embolism, aortic dissection, and myocarditis. Immediate ECG and chest X-ray are recommended, along with serial troponin measurements. Consider CT pulmonary angiogram if PE is suspected, and cardiology consultation is recommended."
+    }
+  }
+}
+```
+
+### Failed Response Example
+
+```json
+{
+  "data": {
+    "id": "consensus_abc123def456",
+    "status": "failed",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:35:00Z",
+    "result": {
+      "error": "Request was rejected due to insufficient clinical context"
+    }
+  }
+}
+```
+
+---
+
+## Example Queries
+
+The quality of the consensus response depends on the specificity and clinical relevance of your query. Here are examples of effective clinical queries:
+
+### Differential Diagnosis
+
+```
+What are the differential diagnoses for a 45-year-old patient presenting with
+chest pain, shortness of breath, and elevated troponin levels?
+```
+
+### Treatment Guidelines
+
+```
+What are the current treatment guidelines for newly diagnosed Type 2 diabetes
+in a patient with BMI of 32 and no cardiovascular disease history?
+```
+
+### Drug Interactions
+
+```
+What are the potential drug interactions between warfarin and commonly
+prescribed antibiotics, and how should anticoagulation be managed?
+```
+
+### Symptom Evaluation
+
+```
+A 60-year-old female presents with progressive fatigue, unintentional weight
+loss of 15 pounds over 3 months, and intermittent low-grade fever. What
+workup is recommended?
+```
+
+### Pediatric Considerations
+
+```
+What are the recommended diagnostic criteria and initial management for
+suspected Kawasaki disease in a 3-year-old with 5 days of fever?
+```
+
+---
+
+## Rate Limits
+
+The Medical Consensus endpoint is rate limited to ensure fair usage across all users.
+
+| Aspect | Details |
+|--------|---------|
+| **Limit** | Configurable requests per day (based on your plan) |
+| **Window** | 24 hours |
+| **Exceeded** | Returns `429 Too Many Requests` |
+
+### Handling Rate Limits
+
+When you exceed the rate limit, the API returns a `429` status code:
+
+```json
+{
+  "error": "Too Many Requests",
+  "message": "Rate limit exceeded. Please try again later."
+}
+```
+
+**What to do:**
+- Wait 24 hours for your limit to reset
+- Contact [support@sully.ai](mailto:support@sully.ai) to discuss higher limits
+- Review your usage to optimize query frequency
+
+<CodeGroup>
+```typescript TypeScript
+async function createConsensusWithRetry(query: string): Promise<string> {
+  const response = await fetch('https://api.sully.ai/alpha/consensus', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.SULLY_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ query })
+  });
+
+  if (response.status === 429) {
+    throw new Error('Rate limit exceeded. Please wait 24 hours or contact support.');
+  }
+
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+
+  const { data } = await response.json();
+  return data.id;
+}
+```
+
+```python Python
+import os
+import requests
+
+def create_consensus_with_retry(query: str) -> str:
+    response = requests.post(
+        "https://api.sully.ai/alpha/consensus",
+        headers={
+            "Authorization": f"Bearer {os.environ['SULLY_API_KEY']}",
+            "Content-Type": "application/json"
+        },
+        json={"query": query}
+    )
+
+    if response.status_code == 429:
+        raise Exception("Rate limit exceeded. Please wait 24 hours or contact support.")
+
+    response.raise_for_status()
+    return response.json()["data"]["id"]
+```
+</CodeGroup>
+
+---
+
+## Best Practices
+
+Follow these guidelines to get the best results from Medical Consensus.
+
+### Be Specific in Your Queries
+
+| Less Effective | More Effective |
+|----------------|----------------|
+| "Patient has chest pain" | "55-year-old male with substernal chest pain radiating to left arm, onset 2 hours ago, associated with diaphoresis" |
+| "What about diabetes?" | "What are first-line treatment options for newly diagnosed Type 2 diabetes with HbA1c of 8.5%?" |
+
+### Include Relevant Patient Details
+
+When appropriate, include:
+- Age and sex
+- Relevant medical history
+- Current medications
+- Symptom duration and characteristics
+- Relevant lab values or vital signs
+
+### Use for Clinical Decision Support
+
+<Warning>
+  Medical Consensus is a clinical decision support tool. It does not replace clinical judgment, patient evaluation, or consultation with specialists. Always verify recommendations against current guidelines and apply your professional judgment.
+</Warning>
+
+### Appropriate Use Cases
+
+| Appropriate | Not Appropriate |
+|-------------|-----------------|
+| Exploring differential diagnoses | Making definitive diagnoses |
+| Reviewing treatment guidelines | Prescribing without clinical evaluation |
+| Getting second opinions on complex cases | Emergency medical decisions |
+| Understanding drug interactions | Replacing specialist consultation |
+
+### Verify Results
+
+Always:
+1. Cross-reference with current clinical guidelines
+2. Consider patient-specific factors not in the query
+3. Apply clinical judgment to all recommendations
+4. Document the use of AI-assisted decision support appropriately
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Alpha API Overview"
+    icon="flask"
+    href="/documentation/alpha/overview"
+  >
+    Learn about alpha features and stability expectations
+  </Card>
+  <Card
+    title="Alpha Authentication"
+    icon="key"
+    href="/api-reference-alpha/getting-started/authentication"
+  >
+    Detailed authentication guide for alpha endpoints
+  </Card>
+  <Card
+    title="Create Consensus API"
+    icon="plus"
+    href="/api-reference-alpha/consensus/create"
+  >
+    Full API reference for creating consensus requests
+  </Card>
+  <Card
+    title="Get Consensus API"
+    icon="magnifying-glass"
+    href="/api-reference-alpha/consensus/get"
+  >
+    Full API reference for retrieving consensus results
+  </Card>
+</CardGroup>
