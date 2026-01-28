@@ -1,0 +1,311 @@
+---
+title: 'TypeScript SDK'
+description: 'Official TypeScript SDK for the Sully.ai API'
+---
+
+The official TypeScript SDK provides a type-safe, ergonomic way to interact with the Sully.ai API. It handles authentication, retries, and error handling automatically.
+
+## Installation
+
+Install the SDK using npm:
+
+```bash
+npm install @sullyai/sullyai
+```
+
+Or using yarn:
+
+```bash
+yarn add @sullyai/sullyai
+```
+
+## Quick Setup
+
+### Environment Variables
+
+The SDK automatically reads credentials from environment variables:
+
+```bash
+export SULLY_API_KEY="your-api-key"
+export SULLY_ACCOUNT_ID="your-account-id"
+```
+
+### Client Initialization
+
+```typescript
+import SullyAI from '@sullyai/sullyai';
+
+// Uses SULLY_API_KEY and SULLY_ACCOUNT_ID from environment
+const client = new SullyAI();
+
+// Or configure explicitly
+const client = new SullyAI({
+  apiKey: 'your-api-key',
+  accountId: 'your-account-id',
+});
+```
+
+## Audio Transcriptions
+
+### Upload a File
+
+Upload an audio file for transcription:
+
+```typescript
+import SullyAI from '@sullyai/sullyai';
+import * as fs from 'fs';
+
+const client = new SullyAI();
+
+// Upload audio file for transcription
+const transcription = await client.audio.transcriptions.create({
+  audio: fs.createReadStream('recording.mp3'),
+});
+
+console.log('Transcription ID:', transcription.transcriptionId);
+```
+
+### Poll for Completion
+
+After uploading, poll until the transcription is complete:
+
+```typescript
+// Poll until transcription is ready
+let result = await client.audio.transcriptions.retrieve(transcription.transcriptionId);
+
+while (result.status === 'STATUS_PROCESSING') {
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  result = await client.audio.transcriptions.retrieve(transcription.transcriptionId);
+}
+
+if (result.status === 'STATUS_ERROR') {
+  throw new Error('Transcription failed');
+}
+
+console.log('Transcript:', result.payload?.transcription);
+```
+
+### Delete a Transcription
+
+Remove a transcription when no longer needed:
+
+```typescript
+await client.audio.transcriptions.delete(transcription.transcriptionId);
+```
+
+## Notes
+
+### Create a SOAP Note
+
+Generate a SOAP note from a transcript:
+
+```typescript
+const note = await client.notes.create({
+  transcript: "I've been feeling really tired lately. How long has this been going on? About two weeks.",
+  noteType: { type: 'soap' },
+});
+
+console.log('Note ID:', note.noteId);
+```
+
+### Create with Context
+
+Provide additional context to improve note quality:
+
+```typescript
+const note = await client.notes.create({
+  transcript: "Patient reports persistent headache for 3 days...",
+  noteType: { type: 'soap' },
+  date: '2024-01-15',
+  patientInfo: {
+    name: 'Jane Doe',
+    dateOfBirth: '1985-03-22',
+    gender: 'female',
+  },
+  medicationList: [
+    'Lisinopril 10mg daily',
+    'Metformin 500mg twice daily',
+  ],
+  instructions: 'Focus on neurological symptoms and include differential diagnosis',
+  context: 'Follow-up visit for chronic migraine management',
+});
+```
+
+### Retrieve a Note
+
+Poll until the note is ready:
+
+```typescript
+let result = await client.notes.retrieve(note.noteId);
+
+while (result.status === 'STATUS_PROCESSING') {
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  result = await client.notes.retrieve(note.noteId);
+}
+
+if (result.status === 'STATUS_ERROR') {
+  throw new Error('Note generation failed');
+}
+
+console.log('Generated Note:', result.payload);
+```
+
+## Error Handling
+
+The SDK provides specific error classes for different failure scenarios:
+
+```typescript
+import SullyAI, {
+  APIError,
+  AuthenticationError,
+  RateLimitError,
+  BadRequestError,
+  NotFoundError,
+} from '@sullyai/sullyai';
+
+const client = new SullyAI();
+
+try {
+  const note = await client.notes.retrieve('invalid-id');
+} catch (error) {
+  if (error instanceof AuthenticationError) {
+    // Invalid API key or account ID
+    console.error('Authentication failed:', error.message);
+  } else if (error instanceof RateLimitError) {
+    // Too many requests - implement backoff
+    console.error('Rate limited. Retry after:', error.retryAfter);
+  } else if (error instanceof BadRequestError) {
+    // Invalid request parameters
+    console.error('Bad request:', error.message);
+  } else if (error instanceof NotFoundError) {
+    // Resource not found
+    console.error('Not found:', error.message);
+  } else if (error instanceof APIError) {
+    // Other API errors
+    console.error('API error:', error.status, error.message);
+  } else {
+    throw error;
+  }
+}
+```
+
+### Error Properties
+
+All SDK errors include helpful properties:
+
+```typescript
+try {
+  await client.notes.create({ transcript: '' });
+} catch (error) {
+  if (error instanceof APIError) {
+    console.log('Status code:', error.status);
+    console.log('Error message:', error.message);
+    console.log('Request ID:', error.requestId); // Useful for support
+  }
+}
+```
+
+## Automatic Retries
+
+The SDK automatically retries failed requests with exponential backoff for transient errors (network issues, 5xx responses).
+
+```typescript
+// Default: 2 retry attempts
+const client = new SullyAI();
+
+// Configure custom retry behavior
+const client = new SullyAI({
+  maxRetries: 5, // Increase retry attempts
+});
+
+// Disable retries
+const client = new SullyAI({
+  maxRetries: 0,
+});
+```
+
+## Timeouts
+
+Configure request timeouts to prevent hanging requests:
+
+```typescript
+// Default timeout
+const client = new SullyAI();
+
+// Custom timeout (in milliseconds)
+const client = new SullyAI({
+  timeout: 60000, // 60 seconds
+});
+
+// Per-request timeout override
+const transcription = await client.audio.transcriptions.create(
+  { audio: fs.createReadStream('large-file.mp3') },
+  { timeout: 120000 } // 2 minutes for large files
+);
+```
+
+## TypeScript Benefits
+
+The SDK is written in TypeScript and provides full type safety:
+
+### Type-Safe Requests
+
+```typescript
+// TypeScript catches errors at compile time
+const note = await client.notes.create({
+  transcript: "Patient conversation...",
+  noteType: { type: 'soap' },
+  // @ts-error - 'invalidField' does not exist
+  invalidField: 'value',
+});
+```
+
+### Response Types
+
+All responses are fully typed for excellent IDE autocompletion:
+
+```typescript
+const result = await client.notes.retrieve(noteId);
+
+// Full autocompletion and type checking
+if (result.status === 'STATUS_COMPLETED') {
+  const note = result.payload;
+  // Access typed note fields
+}
+```
+
+### Exported Types
+
+Import types for use in your application:
+
+```typescript
+import type {
+  Note,
+  NoteCreateParams,
+  Transcription,
+  TranscriptionCreateParams,
+} from '@sullyai/sullyai';
+
+function processNote(note: Note): void {
+  // Type-safe note processing
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Audio Transcription Guide"
+    icon="microphone"
+    href="/documentation/notes#1-transcribe-audio"
+  >
+    Learn more about transcribing audio files and streaming
+  </Card>
+  <Card
+    title="Error Handling"
+    icon="triangle-exclamation"
+    href="/api-reference/getting-started/authentication"
+  >
+    Understand API authentication and error responses
+  </Card>
+</CardGroup>
