@@ -1,0 +1,464 @@
+---
+title: 'Multi-Language Support'
+description: 'Handle international and multilingual clinical encounters with 50+ supported languages'
+---
+
+## Overview
+
+Sully.ai supports transcription and note generation in over 50 languages, enabling healthcare providers to document clinical encounters in the patient's preferred language. The API offers two modes for language handling:
+
+| Mode | Best For | Behavior |
+|------|----------|----------|
+| **Single-Language** | Known language encounters | Audio in other languages is filtered out |
+| **Multilingual** | Mixed-language conversations | Automatic language detection and transcription |
+
+Generated clinical notes are produced in the same language as the transcript, ensuring consistency throughout the documentation workflow.
+
+---
+
+## Supported Languages
+
+Sully.ai supports the following languages using [BCP47 language tags](https://en.wikipedia.org/wiki/IETF_language_tag):
+
+| Language | BCP47 Tags |
+|----------|------------|
+| Bulgarian | `bg` |
+| Catalan | `ca` |
+| Chinese (Mandarin Simplified) | `zh`, `zh-CN`, `zh-Hans` |
+| Chinese (Mandarin Traditional) | `zh-TW`, `zh-Hant` |
+| Chinese (Cantonese) | `zh-HK` |
+| Czech | `cs` |
+| Danish | `da`, `da-DK` |
+| Dutch | `nl` |
+| English | `en`, `en-US`, `en-AU`, `en-GB`, `en-NZ`, `en-IN` |
+| Estonian | `et` |
+| Finnish | `fi` |
+| Flemish | `nl-BE` |
+| French | `fr`, `fr-CA` |
+| German | `de`, `de-CH` |
+| Greek | `el` |
+| Hindi | `hi` |
+| Hungarian | `hu` |
+| Indonesian | `id` |
+| Italian | `it` |
+| Japanese | `ja` |
+| Korean | `ko`, `ko-KR` |
+| Latvian | `lv` |
+| Lithuanian | `lt` |
+| Malay | `ms` |
+| Norwegian | `no` |
+| Polish | `pl` |
+| Portuguese | `pt`, `pt-BR`, `pt-PT` |
+| Romanian | `ro` |
+| Russian | `ru` |
+| Slovak | `sk` |
+| Spanish | `es`, `es-419` |
+| Swedish | `sv`, `sv-SE` |
+| Thai | `th`, `th-TH` |
+| Turkish | `tr` |
+| Ukrainian | `uk` |
+| Vietnamese | `vi` |
+
+---
+
+## Single-Language Mode
+
+When you know the language of the clinical encounter in advance, specify it explicitly. This improves transcription accuracy and filters out audio in other languages.
+
+### File Upload
+
+Specify the language when uploading audio files:
+
+<CodeGroup>
+```typescript TypeScript
+import SullyAI from '@sullyai/sullyai';
+import * as fs from 'fs';
+
+const client = new SullyAI();
+
+// Transcribe Spanish audio
+const transcription = await client.audio.transcriptions.create({
+  audio: fs.createReadStream('patient-visit.mp3'),
+  language: 'es',
+});
+
+console.log(`Transcription ID: ${transcription.transcriptionId}`);
+```
+
+```python Python
+from sullyai import SullyAI
+
+client = SullyAI()
+
+# Transcribe Spanish audio
+with open("patient-visit.mp3", "rb") as audio_file:
+    transcription = client.audio.transcriptions.create(
+        audio=audio_file,
+        language="es"
+    )
+
+print(f"Transcription ID: {transcription.transcription_id}")
+```
+
+```bash HTTP
+curl -X POST "https://api.sully.ai/v2/audio/transcriptions" \
+  -H "X-API-Key: ${SULLY_API_KEY}" \
+  -H "X-Account-Id: ${SULLY_ACCOUNT_ID}" \
+  -F "audio=@./patient-visit.mp3" \
+  -F "language=es"
+```
+</CodeGroup>
+
+### Regional Variants
+
+Use regional variants when relevant for better accuracy with regional accents and terminology:
+
+<CodeGroup>
+```typescript TypeScript
+// British English
+const transcription = await client.audio.transcriptions.create({
+  audio: fs.createReadStream('uk-patient-visit.mp3'),
+  language: 'en-GB',
+});
+
+// Brazilian Portuguese
+const transcriptionBR = await client.audio.transcriptions.create({
+  audio: fs.createReadStream('brazil-patient-visit.mp3'),
+  language: 'pt-BR',
+});
+
+// Canadian French
+const transcriptionCA = await client.audio.transcriptions.create({
+  audio: fs.createReadStream('quebec-patient-visit.mp3'),
+  language: 'fr-CA',
+});
+```
+
+```python Python
+# British English
+transcription = client.audio.transcriptions.create(
+    audio=open("uk-patient-visit.mp3", "rb"),
+    language="en-GB"
+)
+
+# Brazilian Portuguese
+transcription_br = client.audio.transcriptions.create(
+    audio=open("brazil-patient-visit.mp3", "rb"),
+    language="pt-BR"
+)
+
+# Canadian French
+transcription_ca = client.audio.transcriptions.create(
+    audio=open("quebec-patient-visit.mp3", "rb"),
+    language="fr-CA"
+)
+```
+
+```bash HTTP
+# British English
+curl -X POST "https://api.sully.ai/v2/audio/transcriptions" \
+  -H "X-API-Key: ${SULLY_API_KEY}" \
+  -H "X-Account-Id: ${SULLY_ACCOUNT_ID}" \
+  -F "audio=@./uk-patient-visit.mp3" \
+  -F "language=en-GB"
+
+# Brazilian Portuguese
+curl -X POST "https://api.sully.ai/v2/audio/transcriptions" \
+  -H "X-API-Key: ${SULLY_API_KEY}" \
+  -H "X-Account-Id: ${SULLY_ACCOUNT_ID}" \
+  -F "audio=@./brazil-patient-visit.mp3" \
+  -F "language=pt-BR"
+```
+</CodeGroup>
+
+<Note>
+When a specific language is set, audio in other languages will be filtered out or ignored. This is useful for ensuring clean transcripts when the encounter language is known.
+</Note>
+
+---
+
+## Multilingual Mode
+
+For clinical encounters where multiple languages are spoken (such as with an interpreter or bilingual patients), use multilingual mode with `language=multi`.
+
+### When to Use Multilingual Mode
+
+- Patient and provider speak different languages
+- Interpreter-assisted visits
+- Bilingual patients who switch between languages
+- Family members speaking different languages during the visit
+
+### Supported Languages for Multilingual Mode
+
+Multilingual mode works well with the following languages:
+
+- Dutch
+- French
+- German
+- Hindi
+- Italian
+- Japanese
+- Portuguese
+- Russian
+- Spanish
+
+### File Upload with Multilingual Mode
+
+<CodeGroup>
+```typescript TypeScript
+import SullyAI from '@sullyai/sullyai';
+import * as fs from 'fs';
+
+const client = new SullyAI();
+
+// Transcribe a multilingual encounter
+const transcription = await client.audio.transcriptions.create({
+  audio: fs.createReadStream('interpreter-visit.mp3'),
+  language: 'multi',
+});
+
+console.log(`Transcription ID: ${transcription.transcriptionId}`);
+
+// Poll for completion
+let result = await client.audio.transcriptions.retrieve(
+  transcription.transcriptionId
+);
+
+while (result.status === 'STATUS_PROCESSING') {
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  result = await client.audio.transcriptions.retrieve(
+    transcription.transcriptionId
+  );
+}
+
+// Transcript includes all detected languages
+console.log('Multilingual Transcript:', result.payload?.transcription);
+```
+
+```python Python
+import time
+from sullyai import SullyAI
+
+client = SullyAI()
+
+# Transcribe a multilingual encounter
+with open("interpreter-visit.mp3", "rb") as audio_file:
+    transcription = client.audio.transcriptions.create(
+        audio=audio_file,
+        language="multi"
+    )
+
+print(f"Transcription ID: {transcription.transcription_id}")
+
+# Poll for completion
+while True:
+    result = client.audio.transcriptions.retrieve(transcription.transcription_id)
+
+    if result.status == "STATUS_SUCCEEDED":
+        # Transcript includes all detected languages
+        print(f"Multilingual Transcript: {result.payload.transcription}")
+        break
+    elif result.status == "STATUS_ERROR":
+        raise Exception("Transcription failed")
+
+    time.sleep(2)
+```
+
+```bash HTTP
+# Upload with multilingual mode
+curl -X POST "https://api.sully.ai/v2/audio/transcriptions" \
+  -H "X-API-Key: ${SULLY_API_KEY}" \
+  -H "X-Account-Id: ${SULLY_ACCOUNT_ID}" \
+  -F "audio=@./interpreter-visit.mp3" \
+  -F "language=multi"
+
+# Response: { "data": { "transcriptionId": "tr_abc123" } }
+
+# Poll for completion
+curl -X GET "https://api.sully.ai/v2/audio/transcriptions/tr_abc123" \
+  -H "X-API-Key: ${SULLY_API_KEY}" \
+  -H "X-Account-Id: ${SULLY_ACCOUNT_ID}"
+```
+</CodeGroup>
+
+---
+
+## Language in Streaming
+
+When using real-time WebSocket streaming, specify the language as a URL parameter.
+
+### WebSocket URL Parameters
+
+```
+wss://api.sully.ai/v1/audio/transcriptions/stream?sample_rate=16000&account_id={id}&api_token={token}&language={language}
+```
+
+### Single Language Streaming
+
+<CodeGroup>
+```typescript TypeScript
+// Get streaming token first
+const token = await getStreamingToken();
+const accountId = process.env.SULLY_ACCOUNT_ID!;
+
+// Connect with Spanish language
+const ws = new WebSocket(
+  `wss://api.sully.ai/v1/audio/transcriptions/stream?sample_rate=16000&account_id=${accountId}&api_token=${token}&language=es`
+);
+
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  if (data.text) {
+    console.log('Spanish transcript:', data.text);
+  }
+};
+```
+
+```python Python
+import asyncio
+import websockets
+import json
+
+async def stream_spanish():
+    token = await get_streaming_token()
+    account_id = os.environ["SULLY_ACCOUNT_ID"]
+
+    # Connect with Spanish language
+    url = f"wss://api.sully.ai/v1/audio/transcriptions/stream?sample_rate=16000&account_id={account_id}&api_token={token}&language=es"
+
+    async with websockets.connect(url) as ws:
+        async for message in ws:
+            data = json.loads(message)
+            if "text" in data:
+                print(f"Spanish transcript: {data['text']}")
+
+asyncio.run(stream_spanish())
+```
+
+```bash HTTP
+# WebSocket URL for Spanish streaming
+wss://api.sully.ai/v1/audio/transcriptions/stream?sample_rate=16000&account_id={ACCOUNT_ID}&api_token={TOKEN}&language=es
+
+# With regional variant (British English)
+wss://api.sully.ai/v1/audio/transcriptions/stream?sample_rate=16000&account_id={ACCOUNT_ID}&api_token={TOKEN}&language=en-GB
+```
+</CodeGroup>
+
+### Multilingual Streaming
+
+<CodeGroup>
+```typescript TypeScript
+// Connect with multilingual mode
+const ws = new WebSocket(
+  `wss://api.sully.ai/v1/audio/transcriptions/stream?sample_rate=16000&account_id=${accountId}&api_token=${token}&language=multi`
+);
+
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  if (data.text) {
+    // Automatically handles multiple languages
+    console.log('Transcript:', data.text);
+  }
+};
+```
+
+```python Python
+async def stream_multilingual():
+    token = await get_streaming_token()
+    account_id = os.environ["SULLY_ACCOUNT_ID"]
+
+    # Connect with multilingual mode
+    url = f"wss://api.sully.ai/v1/audio/transcriptions/stream?sample_rate=16000&account_id={account_id}&api_token={token}&language=multi"
+
+    async with websockets.connect(url) as ws:
+        async for message in ws:
+            data = json.loads(message)
+            if "text" in data:
+                # Automatically handles multiple languages
+                print(f"Transcript: {data['text']}")
+
+asyncio.run(stream_multilingual())
+```
+
+```bash HTTP
+# WebSocket URL for multilingual streaming
+wss://api.sully.ai/v1/audio/transcriptions/stream?sample_rate=16000&account_id={ACCOUNT_ID}&api_token={TOKEN}&language=multi
+```
+</CodeGroup>
+
+---
+
+## Best Practices
+
+Follow these guidelines to optimize language handling in your integration:
+
+### Use Specific Languages When Known
+
+When you know the language of the encounter in advance, always specify it explicitly rather than using multilingual mode. Single-language mode provides:
+
+- Better transcription accuracy
+- Faster processing
+- Reduced false positives from background noise in other languages
+
+### Use Regional Variants When Relevant
+
+Regional variants improve accuracy for:
+
+- **Accents**: `en-GB` for British accents, `en-AU` for Australian
+- **Medical terminology**: Regional differences in drug names and procedures
+- **Spelling conventions**: `en-US` vs `en-GB` spelling in generated notes
+
+### Reserve Multilingual Mode for True Multilingual Encounters
+
+Only use `language=multi` when the conversation genuinely involves multiple languages:
+
+- Interpreter-assisted visits
+- Bilingual patient-provider conversations
+- Family discussions involving multiple languages
+
+<Warning>
+Using multilingual mode when only one language is spoken may reduce transcription accuracy. Always prefer single-language mode when the encounter language is known.
+</Warning>
+
+### Note Language Consistency
+
+Generated clinical notes are produced in the same language as the transcript:
+
+- Spanish transcript produces Spanish notes
+- Multilingual transcripts produce notes in the dominant language of the conversation
+- No separate language parameter is needed for note generation
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Audio Transcription"
+    icon="microphone"
+    href="/documentation/guides/transcription"
+  >
+    Learn about file upload and real-time streaming options
+  </Card>
+  <Card
+    title="Clinical Notes"
+    icon="file-medical"
+    href="/documentation/guides/clinical-notes"
+  >
+    Generate structured notes from multilingual transcripts
+  </Card>
+  <Card
+    title="TypeScript SDK"
+    icon="js"
+    href="/documentation/sdks/typescript"
+  >
+    Full SDK reference for Node.js applications
+  </Card>
+  <Card
+    title="Python SDK"
+    icon="python"
+    href="/documentation/sdks/python"
+  >
+    Full SDK reference for Python applications
+  </Card>
+</CardGroup>
