@@ -1,0 +1,1043 @@
+---
+title: 'Note Customization'
+description: 'Deep dive into customizing note output with styles and templates in Sully.ai'
+sidebarTitle: 'Note Customization'
+---
+
+## Overview
+
+Sully.ai provides built-in SOAP note generation, but many practices need more control over their clinical documentation. When standard SOAP notes do not match your workflow, you have two powerful customization options:
+
+- **Note Styles**: Let Sully learn from a sample note you provide
+- **Note Templates**: Define precise structure with full control over sections, formatting, and content
+
+This guide covers both approaches in depth, helping you choose the right one for your needs.
+
+## Note Styles Deep Dive
+
+Note Styles allow Sully to learn your preferred documentation format by analyzing a sample note you provide. This is the fastest way to customize output without defining explicit structure.
+
+### How Sully Learns from Your Sample Note
+
+When you create a Note Style, Sully analyzes your sample to understand:
+
+- **Section organization**: How you structure information (headers, order, groupings)
+- **Writing style**: Your preferred tone, sentence structure, and terminology
+- **Level of detail**: How verbose or concise your notes typically are
+- **Formatting conventions**: Use of lists, paragraphs, abbreviations
+
+Sully then applies these patterns when generating notes from new transcriptions.
+
+### What Makes a Good Sample
+
+Your sample note quality directly impacts the output. Effective samples share these characteristics:
+
+| Characteristic | Why It Matters |
+|----------------|----------------|
+| **Consistent structure** | Sully needs clear patterns to learn from |
+| **Clear section headers** | Helps identify logical groupings |
+| **Representative content** | Should reflect typical visit complexity |
+| **Complete sections** | Include all sections you want in generated notes |
+| **Explicit formatting** | Be intentional about lists vs. paragraphs |
+
+### Creating Effective Samples
+
+Follow these guidelines when preparing your sample note:
+
+1. **Include all sections you want**: If you want a "Social History" section, include it in your sample
+2. **Be explicit about formatting**: Use bullet points where you want lists, paragraphs where you want prose
+3. **Show preferred terminology**: Use your actual clinical abbreviations and phrasing
+4. **Demonstrate detail level**: If you want thorough assessments, write a thorough assessment
+
+<CodeGroup>
+```typescript TypeScript
+import Sully from '@sullyai/sullyai';
+
+const sully = new Sully({
+  apiKey: process.env.SULLY_API_KEY,
+  accountId: process.env.SULLY_ACCOUNT_ID,
+});
+
+// Create a note style from your sample
+const styleResponse = await sully.noteStyles.create({
+  name: 'Dr. Smith Internal Medicine Style',
+  sample: `
+    CHIEF COMPLAINT: [reason for visit]
+
+    HISTORY OF PRESENT ILLNESS:
+    Patient is a [age]-year-old [gender] presenting with [complaint].
+    Onset was [timeframe]. Associated symptoms include [symptoms].
+    Denies [negative findings].
+
+    PAST MEDICAL HISTORY:
+    - [condition 1]
+    - [condition 2]
+
+    MEDICATIONS:
+    - [medication 1]
+    - [medication 2]
+
+    PHYSICAL EXAMINATION:
+    General: [appearance]
+    Vitals: BP [x/y], HR [x], RR [x], Temp [x], SpO2 [x]%
+    [relevant system exams]
+
+    ASSESSMENT AND PLAN:
+    1. [Diagnosis 1]: [plan]
+    2. [Diagnosis 2]: [plan]
+
+    Follow-up in [timeframe].
+  `
+});
+
+const styleId = styleResponse.data.noteStyleId;
+
+// Use the style when generating notes
+const noteResponse = await sully.notes.create({
+  transcript: transcription,
+  noteType: {
+    type: 'note_style',
+    noteStyleId: styleId
+  }
+});
+```
+
+```python Python
+import os
+from sullyai import Sully
+
+sully = Sully(
+    api_key=os.environ["SULLY_API_KEY"],
+    account_id=os.environ["SULLY_ACCOUNT_ID"],
+)
+
+# Create a note style from your sample
+style_response = sully.note_styles.create(
+    name="Dr. Smith Internal Medicine Style",
+    sample="""
+    CHIEF COMPLAINT: [reason for visit]
+
+    HISTORY OF PRESENT ILLNESS:
+    Patient is a [age]-year-old [gender] presenting with [complaint].
+    Onset was [timeframe]. Associated symptoms include [symptoms].
+    Denies [negative findings].
+
+    PAST MEDICAL HISTORY:
+    - [condition 1]
+    - [condition 2]
+
+    MEDICATIONS:
+    - [medication 1]
+    - [medication 2]
+
+    PHYSICAL EXAMINATION:
+    General: [appearance]
+    Vitals: BP [x/y], HR [x], RR [x], Temp [x], SpO2 [x]%
+    [relevant system exams]
+
+    ASSESSMENT AND PLAN:
+    1. [Diagnosis 1]: [plan]
+    2. [Diagnosis 2]: [plan]
+
+    Follow-up in [timeframe].
+    """
+)
+
+style_id = style_response.data.note_style_id
+
+# Use the style when generating notes
+note_response = sully.notes.create(
+    transcript=transcription,
+    note_type={
+        "type": "note_style",
+        "note_style_id": style_id
+    }
+)
+```
+</CodeGroup>
+
+### Limitations of Note Styles
+
+While Note Styles are convenient, they have inherent limitations:
+
+- **Less precise than templates**: Output may vary slightly between generations
+- **Learning interpretation**: Sully interprets your sample, which may not always match your intent exactly
+- **No structured output**: Results are text-only, not JSON with discrete sections
+- **Harder to integrate with EHRs**: Free-text output requires additional parsing
+
+For use cases requiring consistent, structured output, consider Note Templates instead.
+
+---
+
+## Note Templates Deep Dive
+
+Note Templates give you explicit control over every aspect of your note structure. You define sections, specify prompts for content generation, and set formatting properties.
+
+### Full Schema Reference
+
+#### NoteTemplate
+
+The top-level object that defines your template.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Yes | Unique identifier for the template |
+| `title` | string | Yes | Display title for the template |
+| `global_prompt` | string | No | Instructions that apply to all sections |
+| `sections` | Section[] | Yes | Ordered list of sections |
+
+```json
+{
+  "id": "primary-care-soap",
+  "title": "Primary Care SOAP Note",
+  "global_prompt": "Write in formal medical language. Be concise but thorough.",
+  "sections": [
+    // HeadingSection, TextSection, or ListSection objects
+  ]
+}
+```
+
+#### HeadingSection
+
+Defines a section header that can contain nested sections.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Yes | Unique identifier |
+| `type` | string | Yes | Must be `"heading"` |
+| `properties.level` | number | Yes | Heading level (0-6) |
+| `properties.text` | string | Yes | The heading text |
+| `properties.bold` | boolean | No | Whether to bold the heading |
+| `properties.italic` | boolean | No | Whether to italicize the heading |
+| `properties.hideIfEmpty` | boolean | No | Hide if no content in children |
+| `children` | Section[] | Yes | Nested sections under this heading |
+
+<Warning>
+**Maximum Nesting Depth**: Headings can only be nested 2 levels deep. Deeper nesting will cause validation errors.
+</Warning>
+
+```json
+{
+  "id": "subjective-heading",
+  "type": "heading",
+  "properties": {
+    "level": 1,
+    "text": "Subjective",
+    "bold": true,
+    "hideIfEmpty": false
+  },
+  "children": [
+    // TextSection or ListSection objects
+  ]
+}
+```
+
+#### TextSection
+
+Defines a text content block with AI-generated content.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Yes | Unique identifier |
+| `type` | string | Yes | Must be `"text"` |
+| `prompt` | string | Yes | Instructions for generating this text |
+| `properties.detail_level` | string | No | Content depth (see below) |
+| `properties.tone` | string | No | Writing tone (see below) |
+| `properties.formatting_style` | string | No | `"markdown"` or `"plain"` |
+| `properties.min_sentences` | number | No | Minimum sentence count |
+| `properties.max_sentences` | number | No | Maximum sentence count |
+| `properties.hideIfEmpty` | boolean | No | Hide if no relevant content |
+| `properties.label` | string | No | Inline label before text |
+| `properties.bold_label` | boolean | No | Bold the label |
+
+**Detail Levels:**
+
+| Level | Description |
+|-------|-------------|
+| `exhaustive` | Maximum detail, nothing omitted |
+| `detailed` | Comprehensive with full context |
+| `standard` | Balanced detail (default) |
+| `brief` | Essential information only |
+| `minimal` | Bare minimum facts |
+
+**Tones:**
+
+| Tone | Description |
+|------|-------------|
+| `formal` | Professional medical language (default) |
+| `casual` | Conversational but professional |
+| `technical` | Dense clinical terminology |
+| `friendly` | Approachable patient-facing |
+| `instructional` | Step-by-step guidance |
+
+```json
+{
+  "id": "chief-complaint",
+  "type": "text",
+  "prompt": "Summarize the patient's primary reason for the visit in one sentence.",
+  "properties": {
+    "detail_level": "brief",
+    "tone": "formal",
+    "formatting_style": "plain",
+    "max_sentences": 2,
+    "label": "Chief Complaint:",
+    "bold_label": true
+  }
+}
+```
+
+#### ListSection
+
+Defines a bulleted or numbered list with AI-generated items.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Yes | Unique identifier |
+| `type` | string | Yes | Must be `"list"` |
+| `prompt` | string | Yes | Instructions for generating list items |
+| `properties.list_type` | string | Yes | `"bullet"` or `"numeric"` |
+| `properties.min_items` | number | No | Minimum item count |
+| `properties.max_items` | number | No | Maximum item count |
+| `properties.detail_level` | string | No | Content depth per item |
+| `properties.tone` | string | No | Writing tone |
+| `properties.hideIfEmpty` | boolean | No | Hide if no items generated |
+| `properties.emptyPlaceholder` | string | No | Text to show if empty |
+
+```json
+{
+  "id": "medications",
+  "type": "list",
+  "prompt": "List current medications mentioned, including dosages if stated.",
+  "properties": {
+    "list_type": "bullet",
+    "min_items": 0,
+    "max_items": 20,
+    "detail_level": "standard",
+    "hideIfEmpty": false,
+    "emptyPlaceholder": "No medications documented"
+  }
+}
+```
+
+---
+
+## Complete Template Examples
+
+### Primary Care SOAP Template
+
+A comprehensive template for general primary care visits.
+
+```json
+{
+  "id": "primary-care-soap",
+  "title": "Primary Care SOAP Note",
+  "global_prompt": "Generate a thorough clinical note using formal medical language. Include all relevant details from the conversation.",
+  "sections": [
+    {
+      "id": "subjective",
+      "type": "heading",
+      "properties": { "level": 1, "text": "Subjective", "bold": true },
+      "children": [
+        {
+          "id": "chief-complaint",
+          "type": "text",
+          "prompt": "State the patient's primary reason for the visit.",
+          "properties": {
+            "detail_level": "brief",
+            "tone": "formal",
+            "label": "Chief Complaint:",
+            "bold_label": true,
+            "max_sentences": 2
+          }
+        },
+        {
+          "id": "hpi",
+          "type": "text",
+          "prompt": "Describe the history of present illness including onset, duration, severity, associated symptoms, and alleviating/aggravating factors.",
+          "properties": {
+            "detail_level": "detailed",
+            "tone": "formal",
+            "label": "HPI:",
+            "bold_label": true
+          }
+        },
+        {
+          "id": "pmh",
+          "type": "list",
+          "prompt": "List relevant past medical history.",
+          "properties": {
+            "list_type": "bullet",
+            "detail_level": "brief",
+            "hideIfEmpty": true
+          }
+        },
+        {
+          "id": "medications",
+          "type": "list",
+          "prompt": "List current medications with dosages if mentioned.",
+          "properties": {
+            "list_type": "bullet",
+            "detail_level": "standard",
+            "emptyPlaceholder": "No medications documented"
+          }
+        },
+        {
+          "id": "allergies",
+          "type": "text",
+          "prompt": "Document any allergies mentioned.",
+          "properties": {
+            "detail_level": "brief",
+            "label": "Allergies:",
+            "bold_label": true,
+            "hideIfEmpty": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "objective",
+      "type": "heading",
+      "properties": { "level": 1, "text": "Objective", "bold": true },
+      "children": [
+        {
+          "id": "vitals",
+          "type": "text",
+          "prompt": "Document vital signs if mentioned (BP, HR, RR, Temp, SpO2, Weight).",
+          "properties": {
+            "detail_level": "standard",
+            "tone": "technical",
+            "label": "Vitals:",
+            "bold_label": true
+          }
+        },
+        {
+          "id": "physical-exam",
+          "type": "text",
+          "prompt": "Summarize physical examination findings discussed.",
+          "properties": {
+            "detail_level": "detailed",
+            "tone": "formal",
+            "label": "Physical Exam:",
+            "bold_label": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "assessment",
+      "type": "heading",
+      "properties": { "level": 1, "text": "Assessment", "bold": true },
+      "children": [
+        {
+          "id": "diagnoses",
+          "type": "list",
+          "prompt": "List diagnoses or differential diagnoses discussed.",
+          "properties": {
+            "list_type": "numeric",
+            "detail_level": "standard",
+            "tone": "formal"
+          }
+        }
+      ]
+    },
+    {
+      "id": "plan",
+      "type": "heading",
+      "properties": { "level": 1, "text": "Plan", "bold": true },
+      "children": [
+        {
+          "id": "treatment-plan",
+          "type": "list",
+          "prompt": "List treatment recommendations, medications prescribed, tests ordered, referrals, and follow-up instructions.",
+          "properties": {
+            "list_type": "numeric",
+            "detail_level": "detailed",
+            "tone": "instructional"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Cardiology Consultation Template
+
+A specialty template with cardiology-specific sections.
+
+```json
+{
+  "id": "cardiology-consult",
+  "title": "Cardiology Consultation",
+  "global_prompt": "Generate a detailed cardiology consultation note. Emphasize cardiovascular findings and risk factors.",
+  "sections": [
+    {
+      "id": "reason-for-consult",
+      "type": "heading",
+      "properties": { "level": 1, "text": "Reason for Consultation", "bold": true },
+      "children": [
+        {
+          "id": "consult-reason",
+          "type": "text",
+          "prompt": "State the referring provider's question or reason for cardiology consultation.",
+          "properties": {
+            "detail_level": "standard",
+            "tone": "formal",
+            "max_sentences": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": "cardiac-history",
+      "type": "heading",
+      "properties": { "level": 1, "text": "Cardiac History", "bold": true },
+      "children": [
+        {
+          "id": "presenting-symptoms",
+          "type": "text",
+          "prompt": "Describe cardiac symptoms: chest pain characteristics, dyspnea, palpitations, syncope, edema.",
+          "properties": {
+            "detail_level": "exhaustive",
+            "tone": "technical"
+          }
+        },
+        {
+          "id": "cardiac-risk-factors",
+          "type": "list",
+          "prompt": "List cardiovascular risk factors: hypertension, diabetes, smoking, hyperlipidemia, family history, obesity.",
+          "properties": {
+            "list_type": "bullet",
+            "detail_level": "standard"
+          }
+        },
+        {
+          "id": "prior-cardiac-history",
+          "type": "list",
+          "prompt": "List prior cardiac diagnoses, procedures, and interventions.",
+          "properties": {
+            "list_type": "bullet",
+            "detail_level": "detailed",
+            "hideIfEmpty": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "cardiovascular-exam",
+      "type": "heading",
+      "properties": { "level": 1, "text": "Cardiovascular Examination", "bold": true },
+      "children": [
+        {
+          "id": "cv-vitals",
+          "type": "text",
+          "prompt": "Document BP (both arms if applicable), HR, rhythm.",
+          "properties": {
+            "detail_level": "standard",
+            "tone": "technical",
+            "label": "Vitals:",
+            "bold_label": true
+          }
+        },
+        {
+          "id": "cardiac-exam",
+          "type": "text",
+          "prompt": "Document cardiac examination: JVP, carotid bruits, PMI, heart sounds, murmurs, gallops.",
+          "properties": {
+            "detail_level": "detailed",
+            "tone": "technical"
+          }
+        },
+        {
+          "id": "peripheral-exam",
+          "type": "text",
+          "prompt": "Document peripheral vascular exam: pulses, edema, skin changes.",
+          "properties": {
+            "detail_level": "standard",
+            "tone": "technical"
+          }
+        }
+      ]
+    },
+    {
+      "id": "diagnostic-data",
+      "type": "heading",
+      "properties": { "level": 1, "text": "Diagnostic Data", "bold": true },
+      "children": [
+        {
+          "id": "ecg-findings",
+          "type": "text",
+          "prompt": "Summarize ECG findings if discussed.",
+          "properties": {
+            "detail_level": "detailed",
+            "tone": "technical",
+            "label": "ECG:",
+            "bold_label": true,
+            "hideIfEmpty": true
+          }
+        },
+        {
+          "id": "imaging-labs",
+          "type": "list",
+          "prompt": "List relevant imaging and lab results discussed.",
+          "properties": {
+            "list_type": "bullet",
+            "detail_level": "standard",
+            "hideIfEmpty": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "impression-recs",
+      "type": "heading",
+      "properties": { "level": 1, "text": "Impression and Recommendations", "bold": true },
+      "children": [
+        {
+          "id": "impression",
+          "type": "text",
+          "prompt": "Provide clinical impression with differential diagnosis if applicable.",
+          "properties": {
+            "detail_level": "detailed",
+            "tone": "formal"
+          }
+        },
+        {
+          "id": "recommendations",
+          "type": "list",
+          "prompt": "List specific recommendations: further testing, medications, lifestyle modifications, follow-up.",
+          "properties": {
+            "list_type": "numeric",
+            "detail_level": "detailed",
+            "tone": "instructional"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Brief Follow-Up Template
+
+A minimal template for quick follow-up visits.
+
+```json
+{
+  "id": "brief-followup",
+  "title": "Brief Follow-Up Note",
+  "global_prompt": "Generate a concise follow-up note. Focus on interval changes and plan adjustments.",
+  "sections": [
+    {
+      "id": "interval-history",
+      "type": "text",
+      "prompt": "Summarize what has changed since the last visit.",
+      "properties": {
+        "detail_level": "brief",
+        "tone": "formal",
+        "label": "Interval History:",
+        "bold_label": true,
+        "max_sentences": 4
+      }
+    },
+    {
+      "id": "current-status",
+      "type": "text",
+      "prompt": "Describe current symptom status and response to treatment.",
+      "properties": {
+        "detail_level": "standard",
+        "tone": "formal",
+        "label": "Current Status:",
+        "bold_label": true
+      }
+    },
+    {
+      "id": "exam-findings",
+      "type": "text",
+      "prompt": "Note any relevant examination findings.",
+      "properties": {
+        "detail_level": "brief",
+        "tone": "technical",
+        "label": "Exam:",
+        "bold_label": true,
+        "hideIfEmpty": true
+      }
+    },
+    {
+      "id": "plan-updates",
+      "type": "list",
+      "prompt": "List any changes to medications, new orders, or updated instructions.",
+      "properties": {
+        "list_type": "bullet",
+        "detail_level": "standard",
+        "tone": "instructional",
+        "min_items": 1
+      }
+    },
+    {
+      "id": "followup",
+      "type": "text",
+      "prompt": "State the follow-up plan.",
+      "properties": {
+        "detail_level": "minimal",
+        "tone": "formal",
+        "label": "Follow-Up:",
+        "bold_label": true,
+        "max_sentences": 2
+      }
+    }
+  ]
+}
+```
+
+### Using Templates with the API
+
+<CodeGroup>
+```typescript TypeScript
+import Sully from '@sullyai/sullyai';
+
+const sully = new Sully({
+  apiKey: process.env.SULLY_API_KEY,
+  accountId: process.env.SULLY_ACCOUNT_ID,
+});
+
+const template = {
+  id: "primary-care-soap",
+  title: "Primary Care SOAP Note",
+  global_prompt: "Generate a thorough clinical note.",
+  sections: [
+    // ... your sections
+  ]
+};
+
+const noteResponse = await sully.notes.create({
+  transcript: transcription,
+  noteType: {
+    type: 'note_template',
+    template: template
+  }
+});
+```
+
+```python Python
+import os
+from sullyai import Sully
+
+sully = Sully(
+    api_key=os.environ["SULLY_API_KEY"],
+    account_id=os.environ["SULLY_ACCOUNT_ID"],
+)
+
+template = {
+    "id": "primary-care-soap",
+    "title": "Primary Care SOAP Note",
+    "global_prompt": "Generate a thorough clinical note.",
+    "sections": [
+        # ... your sections
+    ]
+}
+
+note_response = sully.notes.create(
+    transcript=transcription,
+    note_type={
+        "type": "note_template",
+        "template": template
+    }
+)
+```
+
+```bash cURL
+curl -X POST "https://api.sully.ai/v1/notes" \
+  -H "X-API-Key: ${SULLY_API_KEY}" \
+  -H "X-Account-Id: ${SULLY_ACCOUNT_ID}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transcript": "...",
+    "noteType": {
+      "type": "note_template",
+      "template": {
+        "id": "primary-care-soap",
+        "title": "Primary Care SOAP Note",
+        "global_prompt": "Generate a thorough clinical note.",
+        "sections": [...]
+      }
+    }
+  }'
+```
+</CodeGroup>
+
+---
+
+## Alpha: AI Template Generation
+
+<Warning>
+**Alpha Feature**: This endpoint is experimental and may change without notice. See the [Alpha API Authentication](/api-reference-alpha/getting-started/authentication) guide for access details.
+</Warning>
+
+Instead of manually building templates, you can use AI to generate them from sample notes or refine existing templates.
+
+### Two Modes
+
+| Mode | Use Case |
+|------|----------|
+| **Generation** | Create a new template from scratch using sample notes |
+| **Refinement** | Improve an existing template based on instructions or before/after comparisons |
+
+### Generation Mode
+
+Provide 1-5 sample notes, and Sully will analyze them to create a matching template.
+
+<CodeGroup>
+```typescript TypeScript
+const response = await fetch('https://api.sully.ai/alpha/note-templates', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${process.env.SULLY_API_KEY}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    mode: 'generate',
+    notes: [
+      {
+        content: `Chief Complaint: Chest pain
+
+HPI: 52-year-old male with substernal chest pressure x 2 hours, radiating to left arm. Associated diaphoresis. No prior episodes.
+
+PMH: HTN, hyperlipidemia
+Medications: Lisinopril 10mg daily, Atorvastatin 40mg daily
+
+Exam: Anxious, diaphoretic. BP 158/94, HR 88, RR 18. Regular rhythm, no murmurs.
+
+Assessment: Acute coronary syndrome, rule out NSTEMI
+Plan:
+1. ECG, troponin q6h x 3
+2. Aspirin 325mg, Heparin drip
+3. Cardiology consult
+4. Admit to telemetry`,
+        description: "Typical cardiology admission note"
+      }
+    ],
+    instructions: "Create a template suitable for cardiology admissions with emphasis on risk stratification."
+  })
+});
+
+const { data } = await response.json();
+// data.id contains the job ID - poll for results
+```
+
+```python Python
+import requests
+import os
+
+response = requests.post(
+    "https://api.sully.ai/alpha/note-templates",
+    headers={
+        "Authorization": f"Bearer {os.environ['SULLY_API_KEY']}",
+        "Content-Type": "application/json"
+    },
+    json={
+        "mode": "generate",
+        "notes": [
+            {
+                "content": """Chief Complaint: Chest pain
+
+HPI: 52-year-old male with substernal chest pressure x 2 hours, radiating to left arm. Associated diaphoresis. No prior episodes.
+
+PMH: HTN, hyperlipidemia
+Medications: Lisinopril 10mg daily, Atorvastatin 40mg daily
+
+Exam: Anxious, diaphoretic. BP 158/94, HR 88, RR 18. Regular rhythm, no murmurs.
+
+Assessment: Acute coronary syndrome, rule out NSTEMI
+Plan:
+1. ECG, troponin q6h x 3
+2. Aspirin 325mg, Heparin drip
+3. Cardiology consult
+4. Admit to telemetry""",
+                "description": "Typical cardiology admission note"
+            }
+        ],
+        "instructions": "Create a template suitable for cardiology admissions with emphasis on risk stratification."
+    }
+)
+
+data = response.json()
+# data["data"]["id"] contains the job ID - poll for results
+```
+</CodeGroup>
+
+### Refinement Mode
+
+Improve an existing template with specific instructions or by showing desired changes.
+
+<CodeGroup>
+```typescript TypeScript
+const response = await fetch('https://api.sully.ai/alpha/note-templates', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${process.env.SULLY_API_KEY}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    mode: 'refine',
+    template: existingTemplate,
+    instructions: "Add a differential diagnosis section under Assessment. Change the Plan section to use numbered items with categories.",
+    note_comparison: {
+      before: "Assessment: Chest pain, likely cardiac.",
+      after: "Assessment: Acute chest pain syndrome.\n\nDifferential Diagnosis:\n1. Unstable angina (most likely)\n2. NSTEMI\n3. Aortic dissection (less likely given presentation)\n4. Pulmonary embolism"
+    }
+  })
+});
+```
+
+```python Python
+response = requests.post(
+    "https://api.sully.ai/alpha/note-templates",
+    headers={
+        "Authorization": f"Bearer {os.environ['SULLY_API_KEY']}",
+        "Content-Type": "application/json"
+    },
+    json={
+        "mode": "refine",
+        "template": existing_template,
+        "instructions": "Add a differential diagnosis section under Assessment. Change the Plan section to use numbered items with categories.",
+        "note_comparison": {
+            "before": "Assessment: Chest pain, likely cardiac.",
+            "after": "Assessment: Acute chest pain syndrome.\n\nDifferential Diagnosis:\n1. Unstable angina (most likely)\n2. NSTEMI\n3. Aortic dissection (less likely given presentation)\n4. Pulmonary embolism"
+        }
+    }
+)
+```
+</CodeGroup>
+
+### Authentication Difference
+
+<Note>
+The Alpha API uses Bearer token authentication instead of the `X-API-Key` header used by the stable API:
+
+```
+Authorization: Bearer YOUR_API_KEY
+```
+</Note>
+
+For complete API documentation, see:
+- [Create Note Template Job](/api-reference-alpha/note-templates/create)
+- [Get Note Template](/api-reference-alpha/note-templates/get)
+- [Alpha Authentication](/api-reference-alpha/getting-started/authentication)
+
+---
+
+## Migrating from Styles to Templates
+
+### When to Migrate
+
+Consider migrating from Note Styles to Templates when you need:
+
+| Requirement | Why Templates Help |
+|-------------|-------------------|
+| **EHR integration** | Structured JSON output maps directly to EHR fields |
+| **Consistent formatting** | Templates guarantee the same structure every time |
+| **Section-level control** | Set different detail levels and tones per section |
+| **Compliance requirements** | Ensure required sections are always present |
+| **Quality assurance** | Easier to validate structured output programmatically |
+
+### Migration Process
+
+1. **Analyze your style output**: Generate several notes using your current style
+2. **Identify patterns**: Note the consistent sections, headers, and formatting
+3. **Map to template sections**: Create HeadingSection, TextSection, and ListSection objects
+4. **Write effective prompts**: Translate your implicit expectations into explicit instructions
+5. **Test and iterate**: Compare template output to style output and adjust
+
+### Example Migration
+
+**Original Style Sample (excerpt):**
+```
+ASSESSMENT:
+Patient presents with typical migraine features. Differential includes tension headache.
+
+PLAN:
+- Start sumatriptan 50mg PRN
+- Headache diary for 2 weeks
+- Follow-up in 1 month
+```
+
+**Equivalent Template Sections:**
+```json
+{
+  "id": "assessment",
+  "type": "heading",
+  "properties": { "level": 1, "text": "Assessment", "bold": true },
+  "children": [
+    {
+      "id": "assessment-text",
+      "type": "text",
+      "prompt": "Provide clinical assessment with differential diagnosis if applicable.",
+      "properties": {
+        "detail_level": "standard",
+        "tone": "formal"
+      }
+    }
+  ]
+},
+{
+  "id": "plan",
+  "type": "heading",
+  "properties": { "level": 1, "text": "Plan", "bold": true },
+  "children": [
+    {
+      "id": "plan-items",
+      "type": "list",
+      "prompt": "List treatment plan including medications, patient instructions, and follow-up.",
+      "properties": {
+        "list_type": "bullet",
+        "detail_level": "standard",
+        "tone": "instructional"
+      }
+    }
+  ]
+}
+```
+
+### Benefits After Migration
+
+- **Predictable output**: Same structure for every note
+- **Easier validation**: Check that required sections have content
+- **Better EHR mapping**: Parse JSON directly into your system
+- **Fine-grained control**: Adjust individual section behavior without affecting others
+- **Version control**: Store templates as JSON and track changes over time
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Note Template Schema"
+    icon="code"
+    href="/api-reference/schemas/note-template"
+  >
+    Complete API reference for template objects
+  </Card>
+  <Card
+    title="Create Note Style"
+    icon="palette"
+    href="/api-reference/note-styles/create"
+  >
+    API reference for creating note styles
+  </Card>
+  <Card
+    title="Alpha: Template Generation"
+    icon="wand-magic-sparkles"
+    href="/api-reference-alpha/note-templates/create"
+  >
+    Use AI to generate templates automatically
+  </Card>
+  <Card
+    title="Notes Guide"
+    icon="book"
+    href="/documentation/notes"
+  >
+    Complete guide to note generation
+  </Card>
+</CardGroup>
