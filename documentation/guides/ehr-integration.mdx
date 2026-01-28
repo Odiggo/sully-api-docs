@@ -1,0 +1,1183 @@
+---
+title: 'EHR Integration'
+description: 'Extract structured JSON from clinical notes for writing to EHR fields'
+---
+
+Sully.ai generates clinical notes with structured JSON output, enabling direct integration with Electronic Health Record (EHR) systems. This guide covers how to extract, transform, and map JSON data to your EHR fields.
+
+## Overview
+
+When generating clinical notes, Sully.ai provides structured JSON alongside markdown output. This structured data makes it straightforward to:
+
+- **Map to EHR fields** - Extract specific data points for direct field population
+- **Maintain consistency** - Ensure predictable output structure for automated workflows
+- **Validate data** - Apply schemas and business rules before writing to EHR
+- **Audit transformations** - Track data flow from note generation to EHR entry
+
+### Structured Output Options
+
+| Approach | JSON Structure | Best For |
+|----------|---------------|----------|
+| **SOAP Notes** | Fixed structure with subjective, objective, assessment, plan | Standard clinical documentation |
+| **Note Templates** | Custom structure matching your template sections | EHR-specific field requirements |
+| **Text-to-JSON** | Schema-defined extraction from any text | Post-processing existing notes |
+
+---
+
+## JSON Output from SOAP Notes
+
+When using `noteType: { type: 'soap' }`, the response includes both markdown and JSON formats. The JSON provides structured access to each SOAP section.
+
+### SOAP JSON Structure
+
+```json
+{
+  "data": {
+    "noteId": "note_abc123",
+    "status": "completed",
+    "payload": {
+      "markdown": "## Subjective\nPatient reports...",
+      "json": {
+        "subjective": {
+          "chiefComplaint": "Headaches for one week",
+          "historyOfPresentIllness": "Patient reports persistent headaches starting 7 days ago. Pain is described as throbbing, localized to the right temple. Onset typically in the afternoon. Associated with photophobia and occasional nausea. No aura reported.",
+          "reviewOfSystems": {
+            "constitutional": "Denies fever, chills, weight changes",
+            "neurological": "Positive for headache, photophobia. Negative for vision changes, weakness, numbness"
+          }
+        },
+        "objective": {
+          "vitalSigns": {
+            "bloodPressure": "120/80",
+            "heartRate": "72",
+            "temperature": "98.6F"
+          },
+          "physicalExam": {
+            "general": "Alert and oriented, no acute distress",
+            "neurological": "Cranial nerves II-XII intact, no focal deficits"
+          }
+        },
+        "assessment": {
+          "diagnoses": [
+            {
+              "description": "Migraine without aura",
+              "icdCode": "G43.909"
+            }
+          ],
+          "clinicalImpression": "Presentation consistent with episodic migraine headaches based on unilateral throbbing pain with photophobia."
+        },
+        "plan": {
+          "medications": [
+            {
+              "name": "Sumatriptan",
+              "dosage": "50mg",
+              "frequency": "As needed for acute episodes",
+              "instructions": "Take at onset of headache, may repeat once after 2 hours if needed"
+            }
+          ],
+          "patientEducation": [
+            "Maintain headache diary to identify triggers",
+            "Avoid known triggers including bright lights and stress"
+          ],
+          "followUp": "Return in 4 weeks or sooner if symptoms worsen"
+        }
+      }
+    }
+  }
+}
+```
+
+### Accessing SOAP JSON Fields
+
+<CodeGroup>
+```typescript TypeScript
+import SullyAI from '@sullyai/sullyai';
+
+const client = new SullyAI();
+
+// Generate and retrieve SOAP note
+const note = await client.notes.create({
+  transcript: "Doctor: What brings you in today?...",
+  noteType: { type: 'soap' },
+});
+
+// Poll until complete
+let result = await client.notes.retrieve(note.noteId);
+while (result.status === 'processing') {
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  result = await client.notes.retrieve(note.noteId);
+}
+
+// Access structured JSON fields
+const { json } = result.payload;
+
+// Extract specific fields for EHR
+const chiefComplaint = json.subjective?.chiefComplaint;
+const diagnoses = json.assessment?.diagnoses || [];
+const medications = json.plan?.medications || [];
+
+console.log('Chief Complaint:', chiefComplaint);
+console.log('Diagnoses:', diagnoses.map(d => d.description));
+console.log('Medications:', medications.map(m => `${m.name} ${m.dosage}`));
+```
+
+```python Python
+from sullyai import Sully
+import time
+
+client = Sully()
+
+# Generate and retrieve SOAP note
+note = client.notes.create(
+    transcript="Doctor: What brings you in today?...",
+    note_type={"type": "soap"},
+)
+
+# Poll until complete
+result = client.notes.retrieve(note.note_id)
+while result.status == "processing":
+    time.sleep(2)
+    result = client.notes.retrieve(note.note_id)
+
+# Access structured JSON fields
+json_data = result.payload.json
+
+# Extract specific fields for EHR
+chief_complaint = json_data.get("subjective", {}).get("chiefComplaint")
+diagnoses = json_data.get("assessment", {}).get("diagnoses", [])
+medications = json_data.get("plan", {}).get("medications", [])
+
+print(f"Chief Complaint: {chief_complaint}")
+print(f"Diagnoses: {[d['description'] for d in diagnoses]}")
+print(f"Medications: {[f\"{m['name']} {m['dosage']}\" for m in medications]}")
+```
+
+```bash cURL
+# First create the note
+NOTE_ID=$(curl -s -X POST "https://api.sully.ai/v1/notes" \
+  -H "X-API-Key: ${SULLY_API_KEY}" \
+  -H "X-Account-Id: ${SULLY_ACCOUNT_ID}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transcript": "Doctor: What brings you in today?...",
+    "noteType": { "type": "soap" }
+  }' | jq -r '.data.noteId')
+
+# Poll until complete
+while true; do
+  RESPONSE=$(curl -s "https://api.sully.ai/v1/notes/${NOTE_ID}" \
+    -H "X-API-Key: ${SULLY_API_KEY}" \
+    -H "X-Account-Id: ${SULLY_ACCOUNT_ID}")
+
+  STATUS=$(echo "${RESPONSE}" | jq -r '.data.status')
+
+  if [ "${STATUS}" = "completed" ]; then
+    # Extract specific JSON fields
+    echo "${RESPONSE}" | jq '.data.payload.json.subjective.chiefComplaint'
+    echo "${RESPONSE}" | jq '.data.payload.json.assessment.diagnoses'
+    break
+  fi
+
+  sleep 2
+done
+```
+</CodeGroup>
+
+---
+
+## JSON Output from Templates
+
+Note templates return structured JSON matching your template section definitions. Each section includes a `result` field containing the generated content.
+
+### Template JSON Structure
+
+When you create a note with a template, the response includes the template structure with populated `result` fields:
+
+```json
+{
+  "data": {
+    "noteId": "note_xyz789",
+    "status": "completed",
+    "payload": {
+      "markdown": "# Chief Complaint\nHeadaches for one week...",
+      "json": {
+        "sections": [
+          {
+            "id": "cc-heading",
+            "type": "heading",
+            "properties": { "level": 1, "text": "Chief Complaint" },
+            "children": [
+              {
+                "id": "cc-content",
+                "type": "text",
+                "prompt": "State the primary reason for the visit",
+                "result": "Headaches for one week"
+              }
+            ]
+          },
+          {
+            "id": "hpi-heading",
+            "type": "heading",
+            "properties": { "level": 1, "text": "History of Present Illness" },
+            "children": [
+              {
+                "id": "hpi-content",
+                "type": "text",
+                "prompt": "Describe symptom history",
+                "result": "Patient reports persistent throbbing headaches beginning 7 days ago. Pain localizes to the right temporal region with intensity rated 7/10. Episodes typically occur in afternoon hours and last 2-4 hours. Associated symptoms include photophobia and mild nausea."
+              }
+            ]
+          },
+          {
+            "id": "plan-heading",
+            "type": "heading",
+            "properties": { "level": 1, "text": "Plan" },
+            "children": [
+              {
+                "id": "plan-items",
+                "type": "list",
+                "prompt": "List treatment plan items",
+                "result": [
+                  "Start sumatriptan 50mg PRN for acute episodes",
+                  "Maintain headache diary for trigger identification",
+                  "Return in 4 weeks for follow-up"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+### Extracting Template Results
+
+<CodeGroup>
+```typescript TypeScript
+import SullyAI from '@sullyai/sullyai';
+
+const client = new SullyAI();
+
+// Define template with predictable section IDs
+const template = {
+  id: 'ehr-integration-template',
+  title: 'EHR Integration Template',
+  sections: [
+    {
+      id: 'chief-complaint',
+      type: 'heading',
+      properties: { level: 1, text: 'Chief Complaint' },
+      children: [
+        {
+          id: 'cc-content',
+          type: 'text',
+          prompt: 'State the primary reason for visit in one sentence',
+          properties: { max_sentences: 1 },
+        },
+      ],
+    },
+    {
+      id: 'diagnoses',
+      type: 'heading',
+      properties: { level: 1, text: 'Diagnoses' },
+      children: [
+        {
+          id: 'diagnosis-list',
+          type: 'list',
+          prompt: 'List all diagnoses discussed',
+          properties: { list_type: 'numeric' },
+        },
+      ],
+    },
+  ],
+};
+
+const note = await client.notes.create({
+  transcript: "...",
+  noteType: { type: 'note_template', template },
+});
+
+// Helper function to find section by ID
+function findSection(sections: any[], id: string): any {
+  for (const section of sections) {
+    if (section.id === id) return section;
+    if (section.children) {
+      const found = findSection(section.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+// Retrieve and extract results by section ID
+const result = await client.notes.retrieve(note.noteId);
+const sections = result.payload.json.sections;
+
+const chiefComplaint = findSection(sections, 'cc-content')?.result;
+const diagnoses = findSection(sections, 'diagnosis-list')?.result || [];
+
+console.log('Chief Complaint:', chiefComplaint);
+console.log('Diagnoses:', diagnoses);
+```
+
+```python Python
+from sullyai import Sully
+
+client = Sully()
+
+# Define template with predictable section IDs
+template = {
+    "id": "ehr-integration-template",
+    "title": "EHR Integration Template",
+    "sections": [
+        {
+            "id": "chief-complaint",
+            "type": "heading",
+            "properties": {"level": 1, "text": "Chief Complaint"},
+            "children": [
+                {
+                    "id": "cc-content",
+                    "type": "text",
+                    "prompt": "State the primary reason for visit in one sentence",
+                    "properties": {"max_sentences": 1},
+                },
+            ],
+        },
+        {
+            "id": "diagnoses",
+            "type": "heading",
+            "properties": {"level": 1, "text": "Diagnoses"},
+            "children": [
+                {
+                    "id": "diagnosis-list",
+                    "type": "list",
+                    "prompt": "List all diagnoses discussed",
+                    "properties": {"list_type": "numeric"},
+                },
+            ],
+        },
+    ],
+}
+
+note = client.notes.create(
+    transcript="...",
+    note_type={"type": "note_template", "template": template},
+)
+
+# Helper function to find section by ID
+def find_section(sections, section_id):
+    for section in sections:
+        if section.get("id") == section_id:
+            return section
+        if "children" in section:
+            found = find_section(section["children"], section_id)
+            if found:
+                return found
+    return None
+
+# Retrieve and extract results by section ID
+result = client.notes.retrieve(note.note_id)
+sections = result.payload.json["sections"]
+
+chief_complaint = find_section(sections, "cc-content")
+diagnoses = find_section(sections, "diagnosis-list")
+
+print(f"Chief Complaint: {chief_complaint.get('result') if chief_complaint else None}")
+print(f"Diagnoses: {diagnoses.get('result', []) if diagnoses else []}")
+```
+</CodeGroup>
+
+<Tip>
+Use meaningful, consistent section IDs in your templates. This makes it easy to extract specific fields programmatically without parsing the entire structure.
+</Tip>
+
+---
+
+## Text-to-JSON Utility
+
+The text-to-JSON endpoint transforms unstructured text into structured JSON using a schema you define. This is useful for extracting specific fields from existing notes or normalizing data.
+
+### Endpoint
+
+```
+POST /v1/utils/text-to-json
+```
+
+### Use Cases
+
+- Extract specific fields from free-text clinical notes
+- Normalize data from different note formats
+- Pull structured data from legacy documentation
+- Create custom field extractions not covered by SOAP or templates
+
+### Example: Extract Medications from Free Text
+
+<CodeGroup>
+```typescript TypeScript
+// Define a schema for the data you want to extract
+const schema = {
+  type: 'object',
+  properties: {
+    medications: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: 'Medication name' },
+          dosage: { type: 'string', description: 'Dosage amount and unit' },
+          frequency: { type: 'string', description: 'How often to take' },
+          route: { type: 'string', description: 'Route of administration' },
+        },
+        required: ['name'],
+      },
+    },
+    allergies: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'List of medication allergies',
+    },
+  },
+};
+
+const response = await fetch('https://api.sully.ai/v1/utils/text-to-json', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': process.env.SULLY_API_KEY!,
+    'X-Account-Id': process.env.SULLY_ACCOUNT_ID!,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    text: `Patient is currently taking lisinopril 10mg once daily for blood pressure,
+           metformin 500mg twice daily with meals for diabetes, and aspirin 81mg daily.
+           Patient reports allergy to penicillin (rash) and sulfa drugs.`,
+    schema: schema,
+  }),
+});
+
+const result = await response.json();
+console.log(JSON.stringify(result.data, null, 2));
+
+// Output:
+// {
+//   "medications": [
+//     { "name": "lisinopril", "dosage": "10mg", "frequency": "once daily", "route": "oral" },
+//     { "name": "metformin", "dosage": "500mg", "frequency": "twice daily with meals", "route": "oral" },
+//     { "name": "aspirin", "dosage": "81mg", "frequency": "daily", "route": "oral" }
+//   ],
+//   "allergies": ["penicillin", "sulfa drugs"]
+// }
+```
+
+```python Python
+import os
+import requests
+
+# Define a schema for the data you want to extract
+schema = {
+    "type": "object",
+    "properties": {
+        "medications": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "Medication name"},
+                    "dosage": {"type": "string", "description": "Dosage amount and unit"},
+                    "frequency": {"type": "string", "description": "How often to take"},
+                    "route": {"type": "string", "description": "Route of administration"},
+                },
+                "required": ["name"],
+            },
+        },
+        "allergies": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "List of medication allergies",
+        },
+    },
+}
+
+response = requests.post(
+    "https://api.sully.ai/v1/utils/text-to-json",
+    headers={
+        "X-API-Key": os.environ["SULLY_API_KEY"],
+        "X-Account-Id": os.environ["SULLY_ACCOUNT_ID"],
+        "Content-Type": "application/json",
+    },
+    json={
+        "text": """Patient is currently taking lisinopril 10mg once daily for blood pressure,
+                   metformin 500mg twice daily with meals for diabetes, and aspirin 81mg daily.
+                   Patient reports allergy to penicillin (rash) and sulfa drugs.""",
+        "schema": schema,
+    },
+)
+
+result = response.json()
+print(result["data"])
+
+# Output:
+# {
+#   "medications": [
+#     {"name": "lisinopril", "dosage": "10mg", "frequency": "once daily", "route": "oral"},
+#     {"name": "metformin", "dosage": "500mg", "frequency": "twice daily with meals", "route": "oral"},
+#     {"name": "aspirin", "dosage": "81mg", "frequency": "daily", "route": "oral"}
+#   ],
+#   "allergies": ["penicillin", "sulfa drugs"]
+# }
+```
+
+```bash cURL
+curl -X POST "https://api.sully.ai/v1/utils/text-to-json" \
+  -H "X-API-Key: ${SULLY_API_KEY}" \
+  -H "X-Account-Id: ${SULLY_ACCOUNT_ID}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "Patient is currently taking lisinopril 10mg once daily for blood pressure, metformin 500mg twice daily with meals for diabetes, and aspirin 81mg daily. Patient reports allergy to penicillin (rash) and sulfa drugs.",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "medications": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "dosage": { "type": "string" },
+              "frequency": { "type": "string" }
+            }
+          }
+        },
+        "allergies": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }'
+```
+</CodeGroup>
+
+---
+
+## Field Mapping Patterns
+
+Map Sully.ai JSON output to your EHR system fields. The following table shows common mappings.
+
+### SOAP JSON to EHR Field Mappings
+
+| SOAP JSON Path | EHR Field | Data Type | Notes |
+|----------------|-----------|-----------|-------|
+| `subjective.chiefComplaint` | ChiefComplaint | String | Primary reason for visit |
+| `subjective.historyOfPresentIllness` | HPI | String | Symptom narrative |
+| `subjective.reviewOfSystems.*` | ROS_* | Object | Map each system separately |
+| `objective.vitalSigns.bloodPressure` | VitalSigns.BP | String | Format: "120/80" |
+| `objective.vitalSigns.heartRate` | VitalSigns.HR | String | Beats per minute |
+| `objective.physicalExam.*` | PhysicalExam_* | Object | Map each exam section |
+| `assessment.diagnoses[]` | ProblemList | Array | Each diagnosis as separate entry |
+| `assessment.diagnoses[].icdCode` | DiagnosisCode | String | ICD-10 code if available |
+| `assessment.clinicalImpression` | ClinicalImpression | String | Assessment narrative |
+| `plan.medications[]` | MedicationOrders | Array | Each medication as order |
+| `plan.patientEducation[]` | PatientInstructions | Array | Education items |
+| `plan.followUp` | FollowUpInstructions | String | Return visit info |
+
+### Mapping Implementation
+
+<CodeGroup>
+```typescript TypeScript
+interface EHRRecord {
+  chiefComplaint: string;
+  hpiNarrative: string;
+  vitalSigns: {
+    bloodPressure: string;
+    heartRate: string;
+    temperature: string;
+  };
+  problemList: Array<{
+    description: string;
+    code?: string;
+    codeSystem?: string;
+  }>;
+  medicationOrders: Array<{
+    drugName: string;
+    dose: string;
+    frequency: string;
+    instructions?: string;
+  }>;
+  followUp: string;
+}
+
+function mapSoapToEHR(soapJson: any): EHRRecord {
+  const { subjective, objective, assessment, plan } = soapJson;
+
+  return {
+    // Single-value fields
+    chiefComplaint: subjective?.chiefComplaint || '',
+    hpiNarrative: subjective?.historyOfPresentIllness || '',
+
+    // Nested object mapping
+    vitalSigns: {
+      bloodPressure: objective?.vitalSigns?.bloodPressure || '',
+      heartRate: objective?.vitalSigns?.heartRate || '',
+      temperature: objective?.vitalSigns?.temperature || '',
+    },
+
+    // Array mapping - diagnoses to problem list
+    problemList: (assessment?.diagnoses || []).map((dx: any) => ({
+      description: dx.description,
+      code: dx.icdCode,
+      codeSystem: dx.icdCode ? 'ICD-10' : undefined,
+    })),
+
+    // Array mapping - medications to orders
+    medicationOrders: (plan?.medications || []).map((med: any) => ({
+      drugName: med.name,
+      dose: med.dosage,
+      frequency: med.frequency,
+      instructions: med.instructions,
+    })),
+
+    // Single-value from plan
+    followUp: plan?.followUp || '',
+  };
+}
+
+// Usage
+const soapJson = result.payload.json;
+const ehrRecord = mapSoapToEHR(soapJson);
+
+// Write to EHR system
+await ehrClient.createEncounter(ehrRecord);
+```
+
+```python Python
+from typing import TypedDict, Optional
+from dataclasses import dataclass
+
+@dataclass
+class VitalSigns:
+    blood_pressure: str
+    heart_rate: str
+    temperature: str
+
+@dataclass
+class Problem:
+    description: str
+    code: Optional[str] = None
+    code_system: Optional[str] = None
+
+@dataclass
+class MedicationOrder:
+    drug_name: str
+    dose: str
+    frequency: str
+    instructions: Optional[str] = None
+
+@dataclass
+class EHRRecord:
+    chief_complaint: str
+    hpi_narrative: str
+    vital_signs: VitalSigns
+    problem_list: list[Problem]
+    medication_orders: list[MedicationOrder]
+    follow_up: str
+
+
+def map_soap_to_ehr(soap_json: dict) -> EHRRecord:
+    subjective = soap_json.get("subjective", {})
+    objective = soap_json.get("objective", {})
+    assessment = soap_json.get("assessment", {})
+    plan = soap_json.get("plan", {})
+
+    vitals = objective.get("vitalSigns", {})
+
+    return EHRRecord(
+        # Single-value fields
+        chief_complaint=subjective.get("chiefComplaint", ""),
+        hpi_narrative=subjective.get("historyOfPresentIllness", ""),
+
+        # Nested object mapping
+        vital_signs=VitalSigns(
+            blood_pressure=vitals.get("bloodPressure", ""),
+            heart_rate=vitals.get("heartRate", ""),
+            temperature=vitals.get("temperature", ""),
+        ),
+
+        # Array mapping - diagnoses to problem list
+        problem_list=[
+            Problem(
+                description=dx.get("description", ""),
+                code=dx.get("icdCode"),
+                code_system="ICD-10" if dx.get("icdCode") else None,
+            )
+            for dx in assessment.get("diagnoses", [])
+        ],
+
+        # Array mapping - medications to orders
+        medication_orders=[
+            MedicationOrder(
+                drug_name=med.get("name", ""),
+                dose=med.get("dosage", ""),
+                frequency=med.get("frequency", ""),
+                instructions=med.get("instructions"),
+            )
+            for med in plan.get("medications", [])
+        ],
+
+        # Single-value from plan
+        follow_up=plan.get("followUp", ""),
+    )
+
+
+# Usage
+soap_json = result.payload.json
+ehr_record = map_soap_to_ehr(soap_json)
+
+# Write to EHR system
+ehr_client.create_encounter(ehr_record)
+```
+</CodeGroup>
+
+### Handling Arrays vs Single Values
+
+Some EHR systems expect single values where Sully.ai returns arrays. Handle these cases explicitly:
+
+```typescript
+// Join array items into single string
+const patientInstructions = (plan.patientEducation || []).join('\n');
+
+// Take first item from array
+const primaryDiagnosis = assessment.diagnoses?.[0]?.description || '';
+
+// Filter and map array items
+const prescriptions = plan.medications
+  ?.filter((med: any) => med.name && med.dosage)
+  .map((med: any) => `${med.name} ${med.dosage} ${med.frequency}`);
+```
+
+---
+
+## Integration Pipeline
+
+A production EHR integration typically follows this pipeline:
+
+```
+Audio Upload → Transcription → Note Generation → JSON Extraction → Transform → Validate → EHR Write
+```
+
+### Webhook-Based Pipeline
+
+Use webhooks for production workloads to avoid polling and handle events asynchronously.
+
+<CodeGroup>
+```typescript TypeScript
+import express from 'express';
+import { isValidSignature } from './webhook-utils';
+
+const app = express();
+app.use('/webhook', express.text({ type: '*/*' }));
+
+// In-memory job tracking (use database in production)
+const jobs = new Map<string, { transcriptionId?: string; noteId?: string; status: string }>();
+
+app.post('/webhook', async (req, res) => {
+  const signature = req.headers['x-sully-signature'] as string;
+  const body = req.body as string;
+
+  if (!isValidSignature(signature, body, process.env.SULLY_WEBHOOK_SECRET!)) {
+    return res.status(403).send('Invalid signature');
+  }
+
+  const event = JSON.parse(body);
+
+  try {
+    switch (event.type) {
+      case 'audio_transcription.succeeded':
+        await handleTranscriptionComplete(event.data);
+        break;
+
+      case 'note_generation.succeeded':
+        await handleNoteComplete(event.data);
+        break;
+
+      case 'audio_transcription.failed':
+      case 'note_generation.failed':
+        await handleFailure(event);
+        break;
+    }
+  } catch (error) {
+    console.error('Pipeline error:', error);
+    // Log error but return 200 to prevent retries
+  }
+
+  res.status(200).send('OK');
+});
+
+async function handleTranscriptionComplete(data: any): Promise<void> {
+  const { transcriptionId, payload } = data;
+  console.log(`Transcription ${transcriptionId} complete, generating note...`);
+
+  // Generate note from transcription
+  const noteResponse = await fetch('https://api.sully.ai/v1/notes', {
+    method: 'POST',
+    headers: {
+      'X-API-Key': process.env.SULLY_API_KEY!,
+      'X-Account-Id': process.env.SULLY_ACCOUNT_ID!,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      transcript: payload.transcription,
+      noteType: { type: 'soap' },
+    }),
+  });
+
+  const { data: noteData } = await noteResponse.json();
+  jobs.set(transcriptionId, {
+    transcriptionId,
+    noteId: noteData.noteId,
+    status: 'note_generating',
+  });
+}
+
+async function handleNoteComplete(data: any): Promise<void> {
+  const { id: noteId, payload } = data;
+  console.log(`Note ${noteId} complete, writing to EHR...`);
+
+  // Extract and transform JSON
+  const soapJson = payload.json;
+  const ehrRecord = mapSoapToEHR(soapJson);
+
+  // Validate before writing
+  const validationErrors = validateEHRRecord(ehrRecord);
+  if (validationErrors.length > 0) {
+    console.error('Validation failed:', validationErrors);
+    await notifyValidationFailure(noteId, validationErrors);
+    return;
+  }
+
+  // Write to EHR
+  try {
+    await writeToEHR(ehrRecord);
+    console.log(`Successfully wrote note ${noteId} to EHR`);
+  } catch (error) {
+    console.error('EHR write failed:', error);
+    await queueForManualReview(noteId, ehrRecord, error);
+  }
+}
+
+async function handleFailure(event: any): Promise<void> {
+  console.error(`${event.type}:`, event.data);
+  await notifyFailure(event);
+}
+
+function validateEHRRecord(record: EHRRecord): string[] {
+  const errors: string[] = [];
+
+  if (!record.chiefComplaint) {
+    errors.push('Chief complaint is required');
+  }
+
+  if (record.problemList.length === 0) {
+    errors.push('At least one diagnosis is required');
+  }
+
+  // Add your EHR-specific validation rules
+  return errors;
+}
+
+async function writeToEHR(record: EHRRecord): Promise<void> {
+  // Implement your EHR API integration
+  // Example: await ehrClient.encounters.create(record);
+}
+```
+
+```python Python
+from flask import Flask, request, Response
+import os
+import json
+import requests
+from webhook_utils import is_valid_signature
+from ehr_mapping import map_soap_to_ehr, validate_ehr_record
+
+app = Flask(__name__)
+
+# In-memory job tracking (use database in production)
+jobs = {}
+
+
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    signature = request.headers.get("x-sully-signature")
+    body = request.get_data(as_text=True)
+
+    if not is_valid_signature(signature, body, os.environ["SULLY_WEBHOOK_SECRET"]):
+        return Response("Invalid signature", status=403)
+
+    event = json.loads(body)
+
+    try:
+        event_type = event.get("type")
+        data = event.get("data", {})
+
+        if event_type == "audio_transcription.succeeded":
+            handle_transcription_complete(data)
+
+        elif event_type == "note_generation.succeeded":
+            handle_note_complete(data)
+
+        elif event_type in ["audio_transcription.failed", "note_generation.failed"]:
+            handle_failure(event)
+
+    except Exception as e:
+        print(f"Pipeline error: {e}")
+        # Log error but return 200 to prevent retries
+
+    return Response("OK", status=200)
+
+
+def handle_transcription_complete(data: dict) -> None:
+    transcription_id = data["transcriptionId"]
+    transcript = data["payload"]["transcription"]
+    print(f"Transcription {transcription_id} complete, generating note...")
+
+    # Generate note from transcription
+    response = requests.post(
+        "https://api.sully.ai/v1/notes",
+        headers={
+            "X-API-Key": os.environ["SULLY_API_KEY"],
+            "X-Account-Id": os.environ["SULLY_ACCOUNT_ID"],
+            "Content-Type": "application/json",
+        },
+        json={
+            "transcript": transcript,
+            "noteType": {"type": "soap"},
+        },
+    )
+
+    note_data = response.json()["data"]
+    jobs[transcription_id] = {
+        "transcription_id": transcription_id,
+        "note_id": note_data["noteId"],
+        "status": "note_generating",
+    }
+
+
+def handle_note_complete(data: dict) -> None:
+    note_id = data["id"]
+    payload = data["payload"]
+    print(f"Note {note_id} complete, writing to EHR...")
+
+    # Extract and transform JSON
+    soap_json = payload["json"]
+    ehr_record = map_soap_to_ehr(soap_json)
+
+    # Validate before writing
+    validation_errors = validate_ehr_record(ehr_record)
+    if validation_errors:
+        print(f"Validation failed: {validation_errors}")
+        notify_validation_failure(note_id, validation_errors)
+        return
+
+    # Write to EHR
+    try:
+        write_to_ehr(ehr_record)
+        print(f"Successfully wrote note {note_id} to EHR")
+    except Exception as e:
+        print(f"EHR write failed: {e}")
+        queue_for_manual_review(note_id, ehr_record, e)
+
+
+def handle_failure(event: dict) -> None:
+    print(f"{event['type']}: {event['data']}")
+    notify_failure(event)
+
+
+def validate_ehr_record(record) -> list[str]:
+    errors = []
+
+    if not record.chief_complaint:
+        errors.append("Chief complaint is required")
+
+    if len(record.problem_list) == 0:
+        errors.append("At least one diagnosis is required")
+
+    # Add your EHR-specific validation rules
+    return errors
+
+
+def write_to_ehr(record) -> None:
+    # Implement your EHR API integration
+    # Example: ehr_client.encounters.create(record)
+    pass
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 3000)))
+```
+</CodeGroup>
+
+### Error Handling at Each Step
+
+| Pipeline Step | Common Errors | Handling Strategy |
+|---------------|---------------|-------------------|
+| **Transcription** | Audio format, quality issues | Notify user, request re-upload |
+| **Note Generation** | Insufficient transcript content | Fall back to manual note entry |
+| **JSON Extraction** | Missing expected fields | Use defaults, flag for review |
+| **Transformation** | Schema mismatch | Log transformation errors, queue for manual mapping |
+| **Validation** | Required fields missing | Reject with specific error message |
+| **EHR Write** | API errors, timeouts | Retry with backoff, queue for manual entry |
+
+---
+
+## Best Practices
+
+### Validate JSON Before Writing
+
+Always validate extracted JSON before writing to your EHR:
+
+```typescript
+import { z } from 'zod';
+
+// Define validation schema matching your EHR requirements
+const EHRRecordSchema = z.object({
+  chiefComplaint: z.string().min(1, 'Chief complaint is required'),
+  hpiNarrative: z.string().optional(),
+  problemList: z.array(
+    z.object({
+      description: z.string().min(1),
+      code: z.string().optional(),
+    })
+  ).min(1, 'At least one diagnosis required'),
+  medicationOrders: z.array(
+    z.object({
+      drugName: z.string().min(1),
+      dose: z.string().min(1),
+      frequency: z.string().min(1),
+    })
+  ).optional(),
+});
+
+// Validate before EHR write
+function validateForEHR(record: unknown): { success: boolean; errors?: string[] } {
+  const result = EHRRecordSchema.safeParse(record);
+
+  if (!result.success) {
+    return {
+      success: false,
+      errors: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
+    };
+  }
+
+  return { success: true };
+}
+```
+
+### Handle Missing/Optional Fields
+
+Not all fields will be present in every note. Handle missing data gracefully:
+
+```typescript
+// Use nullish coalescing for defaults
+const chiefComplaint = json.subjective?.chiefComplaint ?? 'Not documented';
+
+// Provide empty arrays for missing lists
+const medications = json.plan?.medications ?? [];
+
+// Use optional chaining for nested access
+const bloodPressure = json.objective?.vitalSigns?.bloodPressure;
+
+// Check before using
+if (bloodPressure) {
+  ehrRecord.vitalSigns.bp = bloodPressure;
+}
+```
+
+### Log Transformations for Audit
+
+Maintain an audit trail of all data transformations:
+
+```typescript
+interface TransformationLog {
+  timestamp: Date;
+  noteId: string;
+  sourceFields: string[];
+  targetFields: string[];
+  transformations: Array<{
+    field: string;
+    from: any;
+    to: any;
+    rule: string;
+  }>;
+}
+
+function logTransformation(log: TransformationLog): void {
+  // Write to your audit system
+  console.log(JSON.stringify({
+    type: 'ehr_transformation',
+    ...log,
+  }));
+}
+```
+
+### Use Templates for Predictable Output
+
+For the most predictable JSON structure, use note templates with well-defined section IDs:
+
+```typescript
+// Define template sections that map directly to EHR fields
+const ehrOptimizedTemplate = {
+  id: 'ehr-optimized',
+  title: 'EHR-Optimized Template',
+  sections: [
+    {
+      id: 'ehr-chief-complaint', // Predictable ID for extraction
+      type: 'text',
+      prompt: 'State the chief complaint in one sentence',
+      properties: { max_sentences: 1 },
+    },
+    {
+      id: 'ehr-problem-list', // Maps directly to EHR ProblemList
+      type: 'list',
+      prompt: 'List all diagnoses with ICD-10 codes if known',
+      properties: { list_type: 'numeric' },
+    },
+    // ... more EHR-aligned sections
+  ],
+};
+```
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Clinical Notes Guide"
+    icon="file-medical"
+    href="/documentation/guides/clinical-notes"
+  >
+    Learn about SOAP notes, custom styles, and templates
+  </Card>
+  <Card
+    title="Webhooks Guide"
+    icon="bell"
+    href="/documentation/guides/webhooks"
+  >
+    Set up real-time notifications for your pipeline
+  </Card>
+  <Card
+    title="Note Template Schema"
+    icon="file-code"
+    href="/api-reference/schemas/note-template"
+  >
+    Complete reference for template section types
+  </Card>
+  <Card
+    title="Text-to-JSON API"
+    icon="code"
+    href="/api-reference/utils/text-to-json"
+  >
+    API reference for custom JSON extraction
+  </Card>
+</CardGroup>
