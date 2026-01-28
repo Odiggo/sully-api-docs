@@ -16,53 +16,85 @@ Sully.ai helps you:
 
 ## Getting Started
 
-1. **Set Up Authentication**: [Contact us](mailto:support@sully.ai) to get your credentials to start integrating with Sully.ai.
-2. **Explore the Demo**: Check out our [demo repository](https://github.com/Odiggo/sully-api-demo) to see working examples.
-3. **Choose Your Integration Path**:
-   - [Upload audio files](/documentation/notes#upload-a-file) for processing
-   - [Stream audio in real-time](/documentation/notes#stream-in-real-time) during patient visits
-4. **Generate Clinical Notes**: Convert transcribed conversations into [structured notes](/documentation/notes#2-generate-a-note)
-5. **Customize Your Experience**: Design [custom note styles](/documentation/notes#custom-note-styles) or use [structured templates](/documentation/notes#structured-note-templates)
-
-## Core Features
+New to Sully? Follow our **[Quickstart Guide](/documentation/quickstart)** to go from zero to your first clinical note in 5 minutes.
 
 <CardGroup cols={2}>
-  <Card
-    title="Audio Transcription"
-    icon="microphone"
-    href="/documentation/notes#1-transcribe-audio"
-  >
-    Convert recorded conversations to text with high accuracy
+  <Card title="Quickstart" icon="rocket" href="/documentation/quickstart">
+    Your first integration in 5 minutes
   </Card>
-  <Card
-    title="Note Generation"
-    icon="file-medical"
-    href="/documentation/notes#2-generate-a-note"
-  >
-    Transform transcriptions into structured clinical notes
+  <Card title="Authentication" icon="key" href="/api-reference/getting-started/authentication">
+    Set up your API credentials
   </Card>
-  <Card
-    title="Customization"
-    icon="sliders"
-    href="/documentation/notes#custom-note-styles"
-  >
-    Create notes in your preferred format and style
+  <Card title="TypeScript SDK" icon="js" href="/documentation/sdks/typescript">
+    Official TypeScript/JavaScript SDK
   </Card>
-  <Card
-    title="Real-time Processing"
-    icon="bolt"
-    href="/documentation/notes#stream-in-real-time"
-  >
-    Generate notes during patient visits
+  <Card title="Python SDK" icon="python" href="/documentation/sdks/python">
+    Official Python SDK
+  </Card>
+</CardGroup>
+
+## Core Workflows
+
+<CardGroup cols={2}>
+  <Card title="Audio Transcription" icon="microphone" href="/documentation/guides/transcription">
+    File upload and real-time streaming with production patterns
+  </Card>
+  <Card title="Clinical Notes" icon="file-medical" href="/documentation/guides/clinical-notes">
+    SOAP notes, custom styles, and templates
+  </Card>
+  <Card title="Note Customization" icon="sliders" href="/documentation/guides/note-customization">
+    Deep dive into styles and template schemas
+  </Card>
+  <Card title="Webhooks" icon="bell" href="/documentation/guides/webhooks">
+    Production-grade async event handling
+  </Card>
+</CardGroup>
+
+## Integrations
+
+<CardGroup cols={2}>
+  <Card title="EHR Integration" icon="hospital" href="/documentation/guides/ehr-integration">
+    Structured JSON for writing to EHR fields
+  </Card>
+  <Card title="Medical Coding" icon="code" href="/documentation/guides/medical-coding">
+    ICD-10, CPT, and SNOMED extraction
+  </Card>
+  <Card title="Multi-Language" icon="globe" href="/documentation/guides/multi-language">
+    50+ languages with multilingual support
+  </Card>
+  <Card title="Context Enrichment" icon="circle-info" href="/documentation/guides/context-enrichment">
+    Improve notes with patient context
+  </Card>
+</CardGroup>
+
+## Production
+
+<CardGroup cols={2}>
+  <Card title="Error Handling" icon="triangle-exclamation" href="/documentation/production/error-handling">
+    Build resilient integrations
+  </Card>
+  <Card title="Security" icon="shield" href="/documentation/production/security">
+    API keys, webhooks, and compliance
+  </Card>
+</CardGroup>
+
+## Alpha Features
+
+Experimental features available for early access:
+
+<CardGroup cols={2}>
+  <Card title="Medical Consensus" icon="users-medical" href="/documentation/alpha/medical-consensus">
+    Get expert medical opinions
+  </Card>
+  <Card title="Template Generation" icon="wand-magic-sparkles" href="/documentation/alpha/template-generation">
+    AI-assisted template creation
   </Card>
 </CardGroup>
 
 ## Need Help?
 
-Our documentation provides comprehensive guides to help you integrate and use Sully.ai effectively:
+- Explore the [API Reference](/api-reference/getting-started/authentication) for technical specifications
+- Check out our [demo repository](https://github.com/Odiggo/sully-api-demo) for working examples
+- Contact [support@sully.ai](mailto:support@sully.ai) for assistance
 
-- Explore the [Notes User Guide](/documentation/notes) for detailed integration instructions
-- Check the [API Reference](/api-reference/getting-started/authentication) for technical specifications
-- Contact [support@sully.ai](mailto:support@sully.ai) if you need additional assistance
-
-Ready to transform your clinical documentation workflow? [Get started now](/documentation/notes)! 
+Ready to transform your clinical documentation workflow? **[Get started now](/documentation/quickstart)**!
