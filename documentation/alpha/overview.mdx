@@ -1,0 +1,207 @@
+---
+title: 'Alpha API Overview'
+description: 'Early access to experimental features for evaluation and feedback'
+sidebarTitle: "Overview"
+---
+
+The Alpha API provides early access to experimental Sully.ai features. These features are available for evaluation and feedback before they graduate to our stable API.
+
+## What is Alpha?
+
+Alpha features are experimental capabilities that we're actively developing:
+
+- **Early Access**: Try new features before general availability
+- **May Change**: APIs and behavior may be modified without notice
+- **Not for Production**: Use for evaluation, testing, and feedback only
+- **Shape the Product**: Your feedback directly influences feature development
+
+<Warning>
+  Alpha features are not recommended for production use. They may change without notice, have different rate limits, and do not include SLA guarantees.
+</Warning>
+
+---
+
+## Available Alpha Features
+
+<CardGroup cols={2}>
+  <Card
+    title="Medical Consensus"
+    icon="users-medical"
+    href="/api-reference-alpha/consensus/create"
+  >
+    Get expert medical opinions on clinical queries with AI-powered analysis
+  </Card>
+  <Card
+    title="Template Generation"
+    icon="wand-magic-sparkles"
+    href="/api-reference-alpha/note-templates/create"
+  >
+    AI-assisted creation and refinement of clinical note templates
+  </Card>
+</CardGroup>
+
+### Medical Consensus
+
+Submit clinical queries and receive comprehensive medical opinions synthesized from multiple expert sources. Useful for:
+
+- Validating diagnoses and treatment approaches
+- Exploring differential diagnoses
+- Getting second opinions on complex cases
+
+### Template Generation
+
+Automatically create and refine note templates based on your existing documentation:
+
+- **Generate**: Analyze provider notes to create customized templates
+- **Refine**: Improve existing templates with instructions or before/after comparisons
+
+---
+
+## Alpha vs Stable API
+
+| Aspect | Stable (v1/v2) | Alpha |
+|--------|----------------|-------|
+| **Authentication** | `X-API-Key` + `X-Account-Id` headers | `Authorization: Bearer` token |
+| **Base URL** | `https://api.sully.ai/v1/` | `https://api.sully.ai/alpha/` |
+| **Stability** | Production-ready | May change without notice |
+| **Support** | Full support | Best-effort |
+| **SLA** | Yes | No |
+| **Rate Limits** | Standard limits | May have different limits |
+
+---
+
+## Authentication
+
+Alpha endpoints use Bearer token authentication instead of the header-based authentication used by stable endpoints.
+
+### Alpha Authentication
+
+```bash
+Authorization: Bearer YOUR_API_KEY
+```
+
+### Comparison with Stable API
+
+<CodeGroup>
+```bash Stable API (v1/v2)
+curl -X POST "https://api.sully.ai/v1/notes" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "X-Account-Id: YOUR_ACCOUNT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{"transcript": "..."}'
+```
+
+```bash Alpha API
+curl -X POST "https://api.sully.ai/alpha/consensus" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "..."}'
+```
+</CodeGroup>
+
+<Note>
+  You use the same API key for both stable and alpha endpoints. Only the header format differs.
+</Note>
+
+---
+
+## Getting Alpha Access
+
+Alpha features are available to all Sully.ai API users:
+
+- **No special signup required** — use your existing API key
+- **Immediate access** — alpha endpoints are ready to use
+- **Same dashboard** — manage your API keys at [dashboard.api.sully.ai](https://dashboard.api.sully.ai)
+
+Simply use the alpha endpoints with Bearer authentication to start experimenting.
+
+---
+
+## Stability Expectations
+
+When using alpha features, expect:
+
+| Change Type | Frequency | Notice |
+|-------------|-----------|--------|
+| **Bug fixes** | Ongoing | None required |
+| **Response format changes** | Occasional | Best-effort notification |
+| **Endpoint modifications** | Rare | Announced when possible |
+| **Feature removal** | Rare | Advance notice provided |
+
+### Best Practices for Alpha Usage
+
+1. **Check documentation regularly** for updates and changes
+2. **Build flexible integrations** that handle schema variations gracefully
+3. **Don't depend on alpha for critical workflows** until features are stable
+4. **Test thoroughly** before any production use
+5. **Subscribe to updates** via the [Sully.ai blog](https://www.sully.ai/blog)
+
+---
+
+## Providing Feedback
+
+Your feedback shapes how alpha features evolve. We want to hear about:
+
+- **Use cases** — How are you using or planning to use these features?
+- **Issues** — Bugs, unexpected behavior, or confusing responses
+- **Suggestions** — Feature requests and improvement ideas
+- **Integration challenges** — Difficulties connecting alpha features to your workflows
+
+### How to Submit Feedback
+
+**Email**: [support@sully.ai](mailto:support@sully.ai)
+
+When submitting feedback:
+
+1. Include **"Alpha Feedback"** in your subject line
+2. Specify which alpha feature you're using
+3. Describe your use case and any issues encountered
+4. Include request IDs and example payloads when relevant
+
+---
+
+## Migration to Stable
+
+When alpha features graduate to the stable API:
+
+1. **Announcement** — We'll publish a migration timeline
+2. **Dual availability** — Features will be available at both alpha and stable paths
+3. **Migration period** — You'll have time to update your integration
+4. **Deprecation** — Alpha endpoints will be deprecated after the migration period
+
+Stay informed about feature graduation via our [blog](https://www.sully.ai/blog) and documentation updates.
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Medical Consensus"
+    icon="users-medical"
+    href="/api-reference-alpha/consensus/create"
+  >
+    Create medical consensus requests for clinical queries
+  </Card>
+  <Card
+    title="Template Generation"
+    icon="wand-magic-sparkles"
+    href="/api-reference-alpha/note-templates/create"
+  >
+    Generate and refine note templates with AI
+  </Card>
+  <Card
+    title="Alpha Authentication"
+    icon="key"
+    href="/api-reference-alpha/getting-started/authentication"
+  >
+    Detailed authentication guide for alpha endpoints
+  </Card>
+  <Card
+    title="Stable API"
+    icon="shield-check"
+    href="/api-reference/getting-started/authentication"
+  >
+    Production-ready API documentation
+  </Card>
+</CardGroup>
