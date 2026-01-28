@@ -1,0 +1,608 @@
+---
+title: 'Medical Coding'
+description: 'Extract ICD-10, CPT, and SNOMED codes from clinical encounters'
+---
+
+The Sully.ai API extracts standardized medical codes from clinical text, enabling automated billing workflows and clinical documentation. This guide covers submitting coding requests, understanding results, and integrating with your clinical workflow.
+
+## Overview
+
+Sully.ai analyzes clinical text (transcripts or notes) and extracts relevant medical codes with their source locations. The API supports three major coding systems:
+
+| Code System | Purpose | Example |
+|-------------|---------|---------|
+| **ICD-10-CM** | Diagnosis codes for billing and classification | `G43.909` (Migraine, unspecified) |
+| **CPT** | Procedure codes for services rendered | `99213` (Office visit, established patient) |
+| **SNOMED CT** | Clinical terminology for interoperability | `37796009` (Migraine) |
+
+---
+
+## Supported Code Systems
+
+### ICD-10-CM (Diagnoses)
+
+The International Classification of Diseases, 10th Revision, Clinical Modification is the standard for diagnosis coding in the United States. Sully.ai extracts ICD-10-CM codes for conditions, symptoms, and diagnoses mentioned in clinical text.
+
+### CPT (Procedures)
+
+Current Procedural Terminology codes describe medical procedures and services. Sully.ai identifies procedure codes based on the clinical context and services documented.
+
+### SNOMED CT (Clinical Terminology)
+
+Systematized Nomenclature of Medicine - Clinical Terms provides comprehensive clinical vocabulary. SNOMED CT codes are included alongside ICD-10-CM codes for diagnoses to support clinical interoperability.
+
+### Code Extraction by Type
+
+| Clinical Element | Code Systems Extracted |
+|------------------|------------------------|
+| **Diagnoses** | ICD-10-CM, SNOMED CT |
+| **Procedures** | CPT |
+
+---
+
+## Creating a Coding Request
+
+Submit clinical text to extract medical codes. The coding operation is asynchronous and returns a coding ID for result retrieval.
+
+<CodeGroup>
+```typescript TypeScript
+import SullyAI from '@sullyai/sullyai';
+
+const client = new SullyAI();
+
+// Submit clinical text for coding
+const coding = await client.codings.create({
+  text: "Patient presents with migraine headache, experiencing throbbing pain on the right side for 3 days. Photophobia and nausea present. Started on sumatriptan 50mg as needed. Follow-up visit scheduled in 2 weeks.",
+});
+
+console.log('Coding ID:', coding.codingId);
+```
+
+```python Python
+from sullyai import Sully
+
+client = Sully()
+
+# Submit clinical text for coding
+coding = client.codings.create(
+    text="Patient presents with migraine headache, experiencing throbbing pain on the right side for 3 days. Photophobia and nausea present. Started on sumatriptan 50mg as needed. Follow-up visit scheduled in 2 weeks."
+)
+
+print(f"Coding ID: {coding.coding_id}")
+```
+
+```bash HTTP
+curl -X POST "https://api.sully.ai/v1/codings" \
+  -H "X-API-Key: ${SULLY_API_KEY}" \
+  -H "X-Account-Id: ${SULLY_ACCOUNT_ID}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "Patient presents with migraine headache, experiencing throbbing pain on the right side for 3 days. Photophobia and nausea present. Started on sumatriptan 50mg as needed. Follow-up visit scheduled in 2 weeks."
+  }'
+
+# Response: { "data": { "codingId": "cod_abc123def456" } }
+```
+</CodeGroup>
+
+### Input Options
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `text` | string | Clinical text to analyze (transcript or note content) |
+
+<Tip>
+You can submit either raw transcripts or generated clinical notes. Notes often produce more accurate coding results because they contain structured clinical information.
+</Tip>
+
+---
+
+## Polling for Results
+
+After submitting a coding request, poll the endpoint until processing completes.
+
+### Status Flow
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Request received, queued for processing |
+| `processing` | Actively analyzing clinical text |
+| `completed` | Codes extracted, available in `result` |
+| `failed` | An error occurred during processing |
+
+### Polling Example
+
+<CodeGroup>
+```typescript TypeScript
+import SullyAI from '@sullyai/sullyai';
+
+const client = new SullyAI();
+
+// Poll until coding completes
+let result = await client.codings.retrieve(coding.codingId);
+
+while (result.status === 'pending' || result.status === 'processing') {
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  result = await client.codings.retrieve(coding.codingId);
+}
+
+if (result.status === 'failed') {
+  throw new Error('Coding extraction failed');
+}
+
+console.log('Diagnoses:', result.result.diagnoses);
+console.log('Procedures:', result.result.procedures);
+```
+
+```python Python
+import time
+from sullyai import Sully
+
+client = Sully()
+
+# Poll until coding completes
+result = client.codings.retrieve(coding.coding_id)
+
+while result.status in ("pending", "processing"):
+    time.sleep(2)
+    result = client.codings.retrieve(coding.coding_id)
+
+if result.status == "failed":
+    raise Exception("Coding extraction failed")
+
+print("Diagnoses:", result.result.diagnoses)
+print("Procedures:", result.result.procedures)
+```
+
+```bash HTTP
+# Poll until complete
+while true; do
+  RESPONSE=$(curl -s "https://api.sully.ai/v1/codings/${CODING_ID}" \
+    -H "X-API-Key: ${SULLY_API_KEY}" \
+    -H "X-Account-Id: ${SULLY_ACCOUNT_ID}")
+
+  STATUS=$(echo "${RESPONSE}" | jq -r '.data.status')
+
+  if [ "${STATUS}" = "completed" ]; then
+    echo "${RESPONSE}" | jq '.data.result'
+    break
+  elif [ "${STATUS}" = "failed" ]; then
+    echo "Coding extraction failed"
+    exit 1
+  fi
+
+  sleep 2
+done
+```
+</CodeGroup>
+
+---
+
+## Understanding Results
+
+When coding completes, the `result` object contains arrays of diagnoses and procedures, each with associated codes and source text locations.
+
+### Diagnoses
+
+The `result.diagnoses` array contains diagnosed conditions with their codes:
+
+```json
+{
+  "diagnoses": [
+    {
+      "id": "diag_001",
+      "code": {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/sid/icd-10-cm",
+            "code": "G43.909",
+            "display": "Migraine, unspecified, not intractable"
+          },
+          {
+            "system": "http://snomed.info/sct",
+            "code": "37796009",
+            "display": "Migraine"
+          }
+        ],
+        "text": "Migraine headache"
+      },
+      "text_span": {
+        "start_char": 22,
+        "end_char": 38,
+        "text": "migraine headache"
+      }
+    }
+  ]
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `id` | Unique identifier for the diagnosis |
+| `code.coding` | Array of codes from different systems (ICD-10-CM, SNOMED CT) |
+| `code.text` | Human-readable description |
+| `text_span` | Source location in the input text |
+
+### Procedures
+
+The `result.procedures` array contains identified procedures with CPT codes:
+
+```json
+{
+  "procedures": [
+    {
+      "id": "proc_001",
+      "code": {
+        "coding": [
+          {
+            "system": "http://www.ama-assn.org/go/cpt",
+            "code": "99213",
+            "display": "Office visit, established patient, low complexity"
+          }
+        ],
+        "text": "Office visit"
+      },
+      "text_span": {
+        "start_char": 156,
+        "end_char": 177,
+        "text": "Follow-up visit"
+      }
+    }
+  ]
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `id` | Unique identifier for the procedure |
+| `code.coding` | Array of CPT codes |
+| `code.text` | Human-readable description |
+| `text_span` | Source location in the input text |
+
+### Code Systems Reference
+
+| System URI | Code System |
+|------------|-------------|
+| `http://hl7.org/fhir/sid/icd-10-cm` | ICD-10-CM |
+| `http://snomed.info/sct` | SNOMED CT |
+| `http://www.ama-assn.org/go/cpt` | CPT |
+
+### Full Response Example
+
+```json
+{
+  "data": {
+    "codingId": "cod_abc123def456",
+    "status": "completed",
+    "created_at": "2024-01-24T15:30:00Z",
+    "updated_at": "2024-01-24T15:30:05Z",
+    "result": {
+      "diagnoses": [
+        {
+          "id": "diag_001",
+          "code": {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/sid/icd-10-cm",
+                "code": "G43.909",
+                "display": "Migraine, unspecified, not intractable"
+              },
+              {
+                "system": "http://snomed.info/sct",
+                "code": "37796009",
+                "display": "Migraine"
+              }
+            ],
+            "text": "Migraine headache"
+          },
+          "text_span": {
+            "start_char": 22,
+            "end_char": 38,
+            "text": "migraine headache"
+          }
+        },
+        {
+          "id": "diag_002",
+          "code": {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/sid/icd-10-cm",
+                "code": "R11.0",
+                "display": "Nausea"
+              },
+              {
+                "system": "http://snomed.info/sct",
+                "code": "422587007",
+                "display": "Nausea"
+              }
+            ],
+            "text": "Nausea"
+          },
+          "text_span": {
+            "start_char": 95,
+            "end_char": 101,
+            "text": "nausea"
+          }
+        }
+      ],
+      "procedures": [
+        {
+          "id": "proc_001",
+          "code": {
+            "coding": [
+              {
+                "system": "http://www.ama-assn.org/go/cpt",
+                "code": "99213",
+                "display": "Office visit, established patient, low complexity"
+              }
+            ],
+            "text": "Office visit"
+          },
+          "text_span": {
+            "start_char": 156,
+            "end_char": 177,
+            "text": "Follow-up visit"
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+---
+
+## Coding + Notes Workflow
+
+A common pattern is to transcribe audio, generate a clinical note, then extract codes. You can run coding on either the raw transcript or the generated note.
+
+<CodeGroup>
+```typescript TypeScript
+import SullyAI from '@sullyai/sullyai';
+import * as fs from 'fs';
+
+const client = new SullyAI();
+
+async function transcribeNoteAndCode() {
+  // 1. Transcribe audio
+  const transcription = await client.audio.transcriptions.create({
+    audio: fs.createReadStream('patient-visit.mp3'),
+  });
+
+  // Poll for transcription...
+  let txResult = await client.audio.transcriptions.retrieve(
+    transcription.transcriptionId
+  );
+  while (txResult.status === 'STATUS_PROCESSING') {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    txResult = await client.audio.transcriptions.retrieve(
+      transcription.transcriptionId
+    );
+  }
+
+  const transcript = txResult.payload?.transcription;
+
+  // 2. Generate clinical note
+  const note = await client.notes.create({
+    transcript: transcript,
+    noteType: { type: 'soap' },
+  });
+
+  // Poll for note...
+  let noteResult = await client.notes.retrieve(note.noteId);
+  while (noteResult.status === 'processing') {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    noteResult = await client.notes.retrieve(note.noteId);
+  }
+
+  const noteText = noteResult.payload?.markdown;
+
+  // 3. Extract codes from the generated note
+  const coding = await client.codings.create({
+    text: noteText,
+  });
+
+  // Poll for coding...
+  let codingResult = await client.codings.retrieve(coding.codingId);
+  while (codingResult.status === 'pending' || codingResult.status === 'processing') {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    codingResult = await client.codings.retrieve(coding.codingId);
+  }
+
+  console.log('Diagnoses:', codingResult.result.diagnoses);
+  console.log('Procedures:', codingResult.result.procedures);
+}
+```
+
+```python Python
+import time
+from sullyai import Sully
+
+client = Sully()
+
+def transcribe_note_and_code():
+    # 1. Transcribe audio
+    with open("patient-visit.mp3", "rb") as audio_file:
+        transcription = client.audio.transcriptions.create(audio=audio_file)
+
+    # Poll for transcription...
+    tx_result = client.audio.transcriptions.retrieve(transcription.transcription_id)
+    while tx_result.status == "STATUS_PROCESSING":
+        time.sleep(2)
+        tx_result = client.audio.transcriptions.retrieve(transcription.transcription_id)
+
+    transcript = tx_result.payload.transcription
+
+    # 2. Generate clinical note
+    note = client.notes.create(
+        transcript=transcript,
+        note_type={"type": "soap"}
+    )
+
+    # Poll for note...
+    note_result = client.notes.retrieve(note.note_id)
+    while note_result.status == "processing":
+        time.sleep(2)
+        note_result = client.notes.retrieve(note.note_id)
+
+    note_text = note_result.payload.markdown
+
+    # 3. Extract codes from the generated note
+    coding = client.codings.create(text=note_text)
+
+    # Poll for coding...
+    coding_result = client.codings.retrieve(coding.coding_id)
+    while coding_result.status in ("pending", "processing"):
+        time.sleep(2)
+        coding_result = client.codings.retrieve(coding.coding_id)
+
+    print("Diagnoses:", coding_result.result.diagnoses)
+    print("Procedures:", coding_result.result.procedures)
+
+transcribe_note_and_code()
+```
+</CodeGroup>
+
+### Using Webhooks
+
+For production applications, use webhooks instead of polling. Configure webhooks to receive `coding.succeeded` and `coding.failed` events.
+
+<CodeGroup>
+```typescript TypeScript
+import express from 'express';
+
+const app = express();
+
+app.post('/webhook', express.json(), (req, res) => {
+  const event = req.body;
+
+  switch (event.type) {
+    case 'coding.succeeded':
+      const { diagnoses, procedures } = event.data.result;
+      console.log(`Coding ${event.data.id} completed`);
+      console.log(`Found ${diagnoses.length} diagnoses, ${procedures.length} procedures`);
+      // Store codes, update billing system, etc.
+      break;
+
+    case 'coding.failed':
+      console.error(`Coding ${event.data.id} failed: ${event.data.error}`);
+      // Handle failure, queue for manual review
+      break;
+  }
+
+  res.status(200).send('OK');
+});
+```
+
+```python Python
+from flask import Flask, request
+
+app = Flask(__name__)
+
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    event = request.json
+
+    if event["type"] == "coding.succeeded":
+        result = event["data"]["result"]
+        diagnoses = result.get("diagnoses", [])
+        procedures = result.get("procedures", [])
+        print(f"Coding {event['data']['id']} completed")
+        print(f"Found {len(diagnoses)} diagnoses, {len(procedures)} procedures")
+        # Store codes, update billing system, etc.
+
+    elif event["type"] == "coding.failed":
+        print(f"Coding {event['data']['id']} failed: {event['data'].get('error')}")
+        # Handle failure, queue for manual review
+
+    return "OK", 200
+```
+</CodeGroup>
+
+For complete webhook setup including signature verification, see the [Webhooks guide](/documentation/guides/webhooks).
+
+---
+
+## Validation and Review
+
+<Warning>
+Medical codes extracted by Sully.ai are suggestions to assist clinical and billing workflows. They are not definitive and should not be submitted for billing without human review.
+</Warning>
+
+### Human Review Required
+
+Always have qualified personnel review extracted codes before:
+
+- Submitting claims to payers
+- Recording codes in the patient's medical record
+- Using codes for quality reporting
+
+### Using text_span for Verification
+
+The `text_span` field helps reviewers verify the source context for each code:
+
+```typescript
+function displayCodeWithContext(diagnosis: Diagnosis): void {
+  const { code, text_span } = diagnosis;
+
+  // Show the code
+  const icd10 = code.coding.find(
+    (c) => c.system === 'http://hl7.org/fhir/sid/icd-10-cm'
+  );
+
+  console.log(`Code: ${icd10?.code} - ${icd10?.display}`);
+  console.log(`Source text: "${text_span.text}"`);
+  console.log(`Location: characters ${text_span.start_char}-${text_span.end_char}`);
+}
+```
+
+### Best Practices
+
+| Practice | Description |
+|----------|-------------|
+| **Review before billing** | Always have certified coders verify extracted codes |
+| **Check specificity** | Ensure codes are at the appropriate level of specificity |
+| **Verify context** | Use `text_span` to confirm codes match clinical documentation |
+| **Document review** | Maintain audit trail of code review and modifications |
+| **Monitor accuracy** | Track coding accuracy over time to identify improvement areas |
+
+### Common Validation Checks
+
+1. **Code specificity** - Ensure codes aren't unspecified when more specific codes apply
+2. **Code combinations** - Verify that diagnosis and procedure codes align appropriately
+3. **Medical necessity** - Confirm procedures are supported by documented diagnoses
+4. **Date alignment** - Ensure coded services match the encounter date
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Clinical Notes"
+    icon="file-medical"
+    href="/documentation/guides/clinical-notes"
+  >
+    Generate structured notes that produce better coding results
+  </Card>
+  <Card
+    title="Webhooks"
+    icon="bell"
+    href="/documentation/guides/webhooks"
+  >
+    Set up real-time notifications for coding completion
+  </Card>
+  <Card
+    title="Audio Transcription"
+    icon="microphone"
+    href="/documentation/guides/transcription"
+  >
+    Capture patient encounters for coding workflows
+  </Card>
+  <Card
+    title="API Reference"
+    icon="book"
+    href="/api-reference/codings/create"
+  >
+    Full coding API documentation
+  </Card>
+</CardGroup>
