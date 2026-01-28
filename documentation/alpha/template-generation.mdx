@@ -1,0 +1,710 @@
+---
+title: 'Template Generation'
+description: 'AI-assisted creation and refinement of clinical note templates in Sully.ai'
+sidebarTitle: 'Template Generation'
+---
+
+## Overview
+
+Template Generation is an AI-powered feature that helps you create and improve clinical note templates without manual authoring. Instead of building templates from scratch, you can describe what you need in natural language or provide an existing template for refinement.
+
+The feature operates in two modes:
+
+| Mode | Purpose |
+|------|---------|
+| **Generation** | Create a new template from a natural language description |
+| **Refinement** | Improve an existing template based on feedback |
+
+This is particularly useful when you need custom note formats for specific specialties or workflows but do not want to manually define every section, prompt, and property.
+
+<Warning>
+**Alpha Feature**: Template generation is currently in alpha. The API may change without notice and should not be used in production environments without careful consideration. See the [Alpha API Authentication](/api-reference-alpha/getting-started/authentication) guide for access details.
+</Warning>
+
+---
+
+## Authentication
+
+The Alpha API uses Bearer token authentication:
+
+```bash
+Authorization: Bearer YOUR_API_KEY
+```
+
+This differs from the stable API which uses the `X-API-Key` header. Use the same API key you obtained from your [Sully.ai dashboard](https://dashboard.api.sully.ai).
+
+---
+
+## Generation Mode
+
+Generation mode creates a template from a natural language description. Describe the template structure, sections, and formatting preferences, and the AI will produce a valid NoteTemplate object.
+
+### Endpoint
+
+```
+POST /alpha/note-templates
+```
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `mode` | string | Yes | Set to `"generation"` |
+| `description` | string | Yes | Natural language description of the template you want |
+
+### Example Request
+
+<CodeGroup>
+```typescript TypeScript
+const response = await fetch('https://api.sully.ai/alpha/note-templates', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${process.env.SULLY_API_KEY}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    mode: 'generation',
+    description: 'Create a template for a cardiology consultation with sections for cardiac history, current symptoms, physical exam findings, EKG interpretation, and recommendations'
+  })
+});
+
+const { data } = await response.json();
+console.log('Job ID:', data.id);
+console.log('Status:', data.status);
+```
+
+```python Python
+import requests
+import os
+
+url = "https://api.sully.ai/alpha/note-templates"
+headers = {
+    "Authorization": f"Bearer {os.environ['SULLY_API_KEY']}",
+    "Content-Type": "application/json"
+}
+data = {
+    "mode": "generation",
+    "description": "Create a template for a cardiology consultation with sections for cardiac history, current symptoms, physical exam findings, EKG interpretation, and recommendations"
+}
+
+response = requests.post(url, headers=headers, json=data)
+result = response.json()
+print(f"Job ID: {result['data']['id']}")
+print(f"Status: {result['data']['status']}")
+```
+
+```bash cURL
+curl -X POST "https://api.sully.ai/alpha/note-templates" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mode": "generation",
+    "description": "Create a template for a cardiology consultation with sections for cardiac history, current symptoms, physical exam findings, EKG interpretation, and recommendations"
+  }'
+```
+</CodeGroup>
+
+### Response
+
+The endpoint returns a job object with a `pending` status:
+
+```json
+{
+  "data": {
+    "id": "template_abc123def456",
+    "mode": "generation",
+    "status": "pending",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+---
+
+## Refinement Mode
+
+Refinement mode improves an existing template based on your feedback. Provide the current template and describe what changes you want, and the AI will produce an updated version.
+
+### Endpoint
+
+```
+POST /alpha/note-templates
+```
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `mode` | string | Yes | Set to `"refinement"` |
+| `template` | object | Yes | The existing NoteTemplate to refine |
+| `feedback` | string | Yes | Description of improvements you want |
+
+### Example Request
+
+<CodeGroup>
+```typescript TypeScript
+const existingTemplate = {
+  id: 'cardiology-consult-v1',
+  title: 'Cardiology Consultation',
+  global_prompt: 'Generate a cardiology consultation note.',
+  sections: [
+    {
+      id: 'cardiac-history',
+      type: 'heading',
+      properties: { level: 1, text: 'Cardiac History' },
+      children: [
+        {
+          id: 'history-text',
+          type: 'text',
+          prompt: 'Document cardiac history.',
+          properties: { detail_level: 'standard', tone: 'formal' }
+        }
+      ]
+    },
+    {
+      id: 'assessment',
+      type: 'heading',
+      properties: { level: 1, text: 'Assessment' },
+      children: [
+        {
+          id: 'assessment-text',
+          type: 'text',
+          prompt: 'Provide clinical assessment.',
+          properties: { detail_level: 'standard', tone: 'formal' }
+        }
+      ]
+    }
+  ]
+};
+
+const response = await fetch('https://api.sully.ai/alpha/note-templates', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${process.env.SULLY_API_KEY}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    mode: 'refinement',
+    template: existingTemplate,
+    feedback: 'Make the assessment section more detailed and add a section for follow-up instructions'
+  })
+});
+
+const { data } = await response.json();
+console.log('Job ID:', data.id);
+```
+
+```python Python
+import requests
+import os
+
+existing_template = {
+    "id": "cardiology-consult-v1",
+    "title": "Cardiology Consultation",
+    "global_prompt": "Generate a cardiology consultation note.",
+    "sections": [
+        {
+            "id": "cardiac-history",
+            "type": "heading",
+            "properties": {"level": 1, "text": "Cardiac History"},
+            "children": [
+                {
+                    "id": "history-text",
+                    "type": "text",
+                    "prompt": "Document cardiac history.",
+                    "properties": {"detail_level": "standard", "tone": "formal"}
+                }
+            ]
+        },
+        {
+            "id": "assessment",
+            "type": "heading",
+            "properties": {"level": 1, "text": "Assessment"},
+            "children": [
+                {
+                    "id": "assessment-text",
+                    "type": "text",
+                    "prompt": "Provide clinical assessment.",
+                    "properties": {"detail_level": "standard", "tone": "formal"}
+                }
+            ]
+        }
+    ]
+}
+
+url = "https://api.sully.ai/alpha/note-templates"
+headers = {
+    "Authorization": f"Bearer {os.environ['SULLY_API_KEY']}",
+    "Content-Type": "application/json"
+}
+data = {
+    "mode": "refinement",
+    "template": existing_template,
+    "feedback": "Make the assessment section more detailed and add a section for follow-up instructions"
+}
+
+response = requests.post(url, headers=headers, json=data)
+result = response.json()
+print(f"Job ID: {result['data']['id']}")
+```
+
+```bash cURL
+curl -X POST "https://api.sully.ai/alpha/note-templates" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mode": "refinement",
+    "template": {
+      "id": "cardiology-consult-v1",
+      "title": "Cardiology Consultation",
+      "global_prompt": "Generate a cardiology consultation note.",
+      "sections": [
+        {
+          "id": "cardiac-history",
+          "type": "heading",
+          "properties": { "level": 1, "text": "Cardiac History" },
+          "children": [
+            {
+              "id": "history-text",
+              "type": "text",
+              "prompt": "Document cardiac history.",
+              "properties": { "detail_level": "standard", "tone": "formal" }
+            }
+          ]
+        },
+        {
+          "id": "assessment",
+          "type": "heading",
+          "properties": { "level": 1, "text": "Assessment" },
+          "children": [
+            {
+              "id": "assessment-text",
+              "type": "text",
+              "prompt": "Provide clinical assessment.",
+              "properties": { "detail_level": "standard", "tone": "formal" }
+            }
+          ]
+        }
+      ]
+    },
+    "feedback": "Make the assessment section more detailed and add a section for follow-up instructions"
+  }'
+```
+</CodeGroup>
+
+---
+
+## Polling for Results
+
+Template generation is asynchronous. After creating a job, poll the GET endpoint to check status and retrieve results.
+
+### Endpoint
+
+```
+GET /alpha/note-templates/{id}
+```
+
+### Status Flow
+
+```
+pending → processing → completed | failed
+```
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Job is queued for processing |
+| `processing` | Currently generating or refining the template |
+| `completed` | Success - `result.template` contains the generated NoteTemplate |
+| `failed` | Error occurred - `result.error` contains the error message |
+
+### Polling Pattern
+
+<CodeGroup>
+```typescript TypeScript
+async function waitForTemplate(jobId: string): Promise<any> {
+  const maxAttempts = 30;
+  const pollInterval = 2000; // 2 seconds
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const response = await fetch(
+      `https://api.sully.ai/alpha/note-templates/${jobId}`,
+      {
+        headers: { 'Authorization': `Bearer ${process.env.SULLY_API_KEY}` }
+      }
+    );
+
+    const { data } = await response.json();
+
+    if (data.status === 'completed') {
+      return data.result.template;
+    }
+
+    if (data.status === 'failed') {
+      throw new Error(`Template generation failed: ${data.result?.error || 'Unknown error'}`);
+    }
+
+    // Wait before next poll
+    await new Promise(resolve => setTimeout(resolve, pollInterval));
+  }
+
+  throw new Error('Template generation timed out');
+}
+
+// Usage
+const template = await waitForTemplate('template_abc123def456');
+console.log('Generated template:', template);
+```
+
+```python Python
+import requests
+import os
+import time
+
+def wait_for_template(job_id: str, max_attempts: int = 30, poll_interval: int = 2) -> dict:
+    url = f"https://api.sully.ai/alpha/note-templates/{job_id}"
+    headers = {
+        "Authorization": f"Bearer {os.environ['SULLY_API_KEY']}"
+    }
+
+    for attempt in range(max_attempts):
+        response = requests.get(url, headers=headers)
+        data = response.json()["data"]
+
+        if data["status"] == "completed":
+            return data["result"]["template"]
+
+        if data["status"] == "failed":
+            error = data.get("result", {}).get("error", "Unknown error")
+            raise Exception(f"Template generation failed: {error}")
+
+        time.sleep(poll_interval)
+
+    raise Exception("Template generation timed out")
+
+# Usage
+template = wait_for_template("template_abc123def456")
+print("Generated template:", template)
+```
+
+```bash cURL
+# Poll until completed
+curl -X GET "https://api.sully.ai/alpha/note-templates/template_abc123def456" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</CodeGroup>
+
+---
+
+## Understanding the Output
+
+When a job completes successfully, `result.template` contains a valid NoteTemplate object that can be used directly with the `POST /v1/notes` endpoint.
+
+### Template Structure
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique identifier for the template |
+| `title` | string | Display title |
+| `global_prompt` | string | Instructions that apply to all sections |
+| `sections` | array | Ordered list of HeadingSection, TextSection, or ListSection objects |
+
+### Example Output
+
+```json
+{
+  "data": {
+    "id": "template_abc123def456",
+    "mode": "generation",
+    "status": "completed",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:32:00Z",
+    "result": {
+      "template": {
+        "id": "cardiology-consultation-generated",
+        "title": "Cardiology Consultation Template",
+        "global_prompt": "Generate a comprehensive cardiology consultation note with emphasis on cardiovascular assessment and risk stratification.",
+        "sections": [
+          {
+            "id": "cardiac-history",
+            "type": "heading",
+            "properties": {
+              "level": 1,
+              "text": "Cardiac History",
+              "bold": true
+            },
+            "children": [
+              {
+                "id": "cardiac-history-text",
+                "type": "text",
+                "prompt": "Document relevant cardiac history including prior diagnoses, procedures, and interventions.",
+                "properties": {
+                  "detail_level": "detailed",
+                  "tone": "technical",
+                  "formatting_style": "markdown"
+                }
+              }
+            ]
+          },
+          {
+            "id": "current-symptoms",
+            "type": "heading",
+            "properties": {
+              "level": 1,
+              "text": "Current Symptoms",
+              "bold": true
+            },
+            "children": [
+              {
+                "id": "symptoms-text",
+                "type": "text",
+                "prompt": "Describe presenting cardiac symptoms including chest pain characteristics, dyspnea, palpitations, syncope, and edema.",
+                "properties": {
+                  "detail_level": "exhaustive",
+                  "tone": "technical"
+                }
+              }
+            ]
+          },
+          {
+            "id": "physical-exam",
+            "type": "heading",
+            "properties": {
+              "level": 1,
+              "text": "Physical Examination",
+              "bold": true
+            },
+            "children": [
+              {
+                "id": "vitals",
+                "type": "text",
+                "prompt": "Document vital signs including blood pressure (both arms if applicable), heart rate, and rhythm.",
+                "properties": {
+                  "detail_level": "standard",
+                  "tone": "technical",
+                  "label": "Vitals:",
+                  "bold_label": true
+                }
+              },
+              {
+                "id": "cardiac-exam",
+                "type": "text",
+                "prompt": "Document cardiac examination findings: JVP, carotid examination, PMI, heart sounds, murmurs, and gallops.",
+                "properties": {
+                  "detail_level": "detailed",
+                  "tone": "technical"
+                }
+              }
+            ]
+          },
+          {
+            "id": "ekg-interpretation",
+            "type": "heading",
+            "properties": {
+              "level": 1,
+              "text": "EKG Interpretation",
+              "bold": true
+            },
+            "children": [
+              {
+                "id": "ekg-findings",
+                "type": "text",
+                "prompt": "Interpret EKG findings including rate, rhythm, intervals, axis, and any abnormalities.",
+                "properties": {
+                  "detail_level": "detailed",
+                  "tone": "technical",
+                  "hideIfEmpty": true
+                }
+              }
+            ]
+          },
+          {
+            "id": "recommendations",
+            "type": "heading",
+            "properties": {
+              "level": 1,
+              "text": "Recommendations",
+              "bold": true
+            },
+            "children": [
+              {
+                "id": "recommendations-list",
+                "type": "list",
+                "prompt": "List specific recommendations including further testing, medications, lifestyle modifications, and follow-up plan.",
+                "properties": {
+                  "list_type": "numeric",
+                  "detail_level": "detailed",
+                  "tone": "instructional"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+### Using the Generated Template
+
+Once you have the template, use it with the notes endpoint:
+
+<CodeGroup>
+```typescript TypeScript
+const noteResponse = await sully.notes.create({
+  transcript: transcription,
+  noteType: {
+    type: 'note_template',
+    template: generatedTemplate
+  }
+});
+```
+
+```python Python
+note_response = sully.notes.create(
+    transcript=transcription,
+    note_type={
+        "type": "note_template",
+        "template": generated_template
+    }
+)
+```
+</CodeGroup>
+
+---
+
+## Iteration Workflow
+
+The recommended workflow for building production-ready templates:
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  Generate   │────▶│    Test     │────▶│   Refine    │
+│  (describe) │     │ (with real  │     │ (feedback)  │
+└─────────────┘     │  transcripts)│     └──────┬──────┘
+                    └─────────────┘            │
+                           ▲                   │
+                           │                   │
+                           └───────────────────┘
+                                   │
+                                   ▼
+                            ┌─────────────┐
+                            │    Done     │
+                            │ (production)│
+                            └─────────────┘
+```
+
+### Step-by-Step
+
+1. **Generate**: Start with a description of the template you need
+2. **Test**: Use the generated template with actual transcriptions
+3. **Review**: Evaluate the note output for missing sections or formatting issues
+4. **Refine**: Use refinement mode with specific feedback
+5. **Repeat**: Continue testing and refining until satisfied
+6. **Deploy**: Use the final template in production
+
+### Example Iteration
+
+```typescript
+// Step 1: Initial generation
+const genResponse = await createTemplateJob({
+  mode: 'generation',
+  description: 'Orthopedic consultation template with injury history, imaging review, and surgical recommendations'
+});
+const initialTemplate = await waitForTemplate(genResponse.data.id);
+
+// Step 2: Test with real data
+const testNote = await sully.notes.create({
+  transcript: sampleTranscript,
+  noteType: { type: 'note_template', template: initialTemplate }
+});
+
+// Step 3: Identify issues (e.g., missing physical exam detail)
+// Step 4: Refine
+const refineResponse = await createTemplateJob({
+  mode: 'refinement',
+  template: initialTemplate,
+  feedback: 'Add a detailed physical examination section with range of motion, strength testing, and special tests. Make the surgical recommendations section use a numbered list format.'
+});
+const refinedTemplate = await waitForTemplate(refineResponse.data.id);
+
+// Step 5: Test again and repeat if needed
+```
+
+---
+
+## Best Practices
+
+### Writing Effective Descriptions (Generation Mode)
+
+| Do | Do Not |
+|----|--------|
+| Be specific about sections | Use vague terms like "good template" |
+| Name sections explicitly | Assume AI knows your preferences |
+| Mention detail levels | Leave formatting to chance |
+| Specify formatting preferences | Skip specialty context |
+
+**Good description:**
+> "Create a dermatology consultation template with sections for: skin lesion description (using ABCDE criteria), location and distribution, relevant history, differential diagnosis with at least 3 possibilities, biopsy recommendations, and follow-up plan. Use bullet points for differentials and numbered items for the plan."
+
+**Poor description:**
+> "Make a skin doctor template"
+
+### Writing Effective Feedback (Refinement Mode)
+
+| Do | Do Not |
+|----|--------|
+| Reference specific sections | Give vague feedback |
+| Describe exact changes | Say "make it better" |
+| Specify formatting changes | Assume context is understood |
+| Explain the reasoning | Provide contradictory instructions |
+
+**Good feedback:**
+> "Change the Assessment section prompt to include severity scoring on a 1-10 scale. Add a 'Red Flags' subsection under History that specifically asks about warning symptoms. Convert the Plan section from paragraph format to a numbered list with categories: Diagnostics, Medications, Referrals, Follow-up."
+
+**Poor feedback:**
+> "Make the assessment better and add more sections"
+
+### General Guidelines
+
+1. **Review before production**: Always test generated templates with real transcriptions before deploying
+2. **Iterate incrementally**: Make small, focused refinements rather than large changes
+3. **Document your templates**: Keep notes on what each template is designed for
+4. **Version control**: Track template versions to revert if needed
+5. **Combine with manual edits**: You can manually adjust the generated template JSON before use
+
+---
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card
+    title="Note Template Schema"
+    icon="code"
+    href="/api-reference/schemas/note-template"
+  >
+    Complete schema reference for NoteTemplate objects
+  </Card>
+  <Card
+    title="Note Customization Guide"
+    icon="sliders"
+    href="/documentation/guides/note-customization"
+  >
+    Deep dive into note styles and templates
+  </Card>
+  <Card
+    title="Create Note Template Job"
+    icon="wand-magic-sparkles"
+    href="/api-reference-alpha/note-templates/create"
+  >
+    Full API reference for the create endpoint
+  </Card>
+  <Card
+    title="Alpha Authentication"
+    icon="key"
+    href="/api-reference-alpha/getting-started/authentication"
+  >
+    Authentication details for alpha endpoints
+  </Card>
+</CardGroup>
