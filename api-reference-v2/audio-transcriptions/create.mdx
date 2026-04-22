@@ -2,4 +2,10 @@
 title: 'Create Audio Transcription'
 openapi: 'POST /v2/audio/transcriptions'
 version: 'v2'
---- 
+---
+
+<Note>
+In addition to the multipart form fields shown below, this endpoint accepts an
+optional `dictation` field. Send `dictation=true` to request dictation-oriented
+transcript formatting. If omitted, `dictation` defaults to `false`.
+</Note>

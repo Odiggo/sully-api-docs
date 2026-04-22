@@ -44,15 +44,17 @@ Endpoint:<br/>`wss://api.sully.ai/v1/audio/transcriptions/stream?account_id=1234
         <li><code>linear16</code>: 16-bit, little-endian, signed PCM WAV data</li>
         <li><code>linear32</code>: 32-bit, little-endian, floating-point PCM WAV data</li>
         <li><code>flac</code>: Free Lossless Audio Codec (FLAC) encoded data</li>
-        <li><code>alaw</code>: A-law encoded WAV data</li>
         <li><code>mulaw</code>: Mu-law encoded WAV data</li>
         <li><code>amr-nb</code>: Adaptive Multi-Rate (AMR) narrowband codec</li>
         <li><code>amr-wb</code>: Adaptive Multi-Rate (AMR) wideband codec</li>
         <li><code>opus</code>: The Opus audio codec</li>
-        <li><code>ogg-opus</code>: The Opus audio codec encapsulated in the Ogg container format</li>
         <li><code>speex</code>: An open-source, speech-specific audio codec</li>
         <li><code>g729</code>: G729 low-bandwidth codec (usable with raw or containerized audio)</li>
       </ul>
+</ParamField>
+
+<ParamField query="dictation" type="boolean" default="false">
+    Requests dictation-oriented transcript formatting for the stream.
 </ParamField>
 
 <ParamField query="account_id" type="string">
@@ -77,7 +79,9 @@ Upon successful connection, the server sends a status message:
 
 ```json
 {
+  "type": "status",
   "status": "connected",
+  "timestamp": "2026-04-22T14:32:07.123Z"
 }
 ```
 
@@ -85,12 +89,33 @@ When the connection closes:
 
 ```json
 {
+  "type": "status",
   "status": "disconnected",
+  "timestamp": "2026-04-22T14:32:17.123Z"
 }
 ```
 
 <Note>
-  **Important:** Wait for the "status": "connected" message before sending audio data. This ensures the server is ready to process your stream.
+  **Important:** Wait for the `type: "status"` / `status: "connected"` message before sending audio data. This ensures the server is ready to process your stream.
+</Note>
+
+## Error Messages
+
+During a live stream, the server may also send an error message:
+
+```json
+{
+  "type": "error",
+  "error": "An error occurred during transcription",
+  "timestamp": "2026-04-22T14:32:12.123Z"
+}
+```
+
+<Note>
+  Treat error messages as advisory. They signal a problem during transcription,
+  but they do not necessarily mean the WebSocket has closed. Continue listening
+  for later transcript or status messages, and reconnect only after the socket
+  closes or you receive a disconnected status.
 </Note>
 
 # Streaming input audio
@@ -112,7 +137,7 @@ The client can send messages with audio input to the server. The messages can co
 
 ## Streaming output audio
 
-The server will always respond with a message containing the following fields:
+Transcript messages contain the following fields:
 
 ```json Response message
 {
