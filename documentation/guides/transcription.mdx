@@ -117,6 +117,66 @@ curl -X GET "https://api.sully.ai/v2/audio/transcriptions/tr_abc123" \
 ```
 </CodeGroup>
 
+### Dictation Formatting
+
+If you want prerecorded transcript output formatted for dictation workflows,
+add the optional `dictation` field and set it to `true`. If omitted,
+`dictation` defaults to `false`.
+
+<CodeGroup>
+```typescript TypeScript
+import { readFile } from 'fs/promises';
+
+const audioBytes = await readFile('./patient-visit.mp3');
+const formData = new FormData();
+
+formData.append(
+  'audio',
+  new File([audioBytes], 'patient-visit.mp3', { type: 'audio/mpeg' })
+);
+formData.append('dictation', 'true');
+
+await fetch('https://api.sully.ai/v2/audio/transcriptions', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': process.env.SULLY_API_KEY!,
+    'X-Account-Id': process.env.SULLY_ACCOUNT_ID!,
+  },
+  body: formData,
+});
+```
+
+```python Python
+import os
+import requests
+
+with open("patient-visit.mp3", "rb") as audio_file:
+    response = requests.post(
+        "https://api.sully.ai/v2/audio/transcriptions",
+        headers={
+            "X-API-Key": os.environ["SULLY_API_KEY"],
+            "X-Account-Id": os.environ["SULLY_ACCOUNT_ID"],
+        },
+        files={
+            "audio": ("patient-visit.mp3", audio_file, "audio/mpeg"),
+        },
+        data={
+            "dictation": "true",
+        },
+    )
+
+response.raise_for_status()
+```
+
+```bash HTTP
+curl -X POST "https://api.sully.ai/v2/audio/transcriptions" \
+  -H "X-API-Key: ${SULLY_API_KEY}" \
+  -H "X-Account-Id: ${SULLY_ACCOUNT_ID}" \
+  -F "audio=@./patient-visit.mp3" \
+  -F "dictation=true"
+```
+</CodeGroup>
+
 ### Status Lifecycle
 
 | Status | Description |
@@ -139,9 +199,10 @@ Stream audio in real-time during patient visits for immediate transcription feed
 ```
 1. Get token     POST /v1/audio/transcriptions/stream/token
 2. Connect       wss://api.sully.ai/v1/audio/transcriptions/stream?...
-3. Send audio    { "audio": "<base64-encoded-audio>" }
-4. Receive text  { "text": "...", "isFinal": true/false }
-5. Close         ws.close()
+3. Wait for      { "type": "status", "status": "connected" }
+4. Send audio    { "audio": "<base64-encoded-audio>" }
+5. Receive       status, transcript, and error messages
+6. Close         ws.close()
 ```
 
 ### Get a Streaming Token
@@ -198,12 +259,28 @@ wss://api.sully.ai/v1/audio/transcriptions/stream?sample_rate=16000&account_id={
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
-| `sample_rate` | Yes | Audio sample rate in Hz (e.g., `16000`, `44100`) |
+| `sample_rate` | No | Audio sample rate in Hz (e.g., `16000`, `44100`). If omitted, the streaming service currently defaults to `16000`. For raw, headerless audio, send the actual sample rate explicitly. |
 | `account_id` | Yes | Your Sully account ID |
 | `api_token` | Yes | Token from the stream token endpoint |
 | `language` | No | BCP47 language tag (e.g., `en`, `es`, `multi`) |
+| `dictation` | No | Set to `true` to request dictation-oriented transcript formatting |
+
+<Note>
+For raw, headerless audio, send both `encoding` and `sample_rate`. For
+containerized audio, omit `encoding`. If `sample_rate` is omitted, the current
+streaming service still defaults it to `16000`.
+</Note>
 
 ### Message Format
+
+**Stream ready:**
+```json
+{
+  "type": "status",
+  "status": "connected",
+  "timestamp": "2026-04-22T14:32:07.123Z"
+}
+```
 
 **Sending audio:**
 ```json
@@ -213,13 +290,28 @@ wss://api.sully.ai/v1/audio/transcriptions/stream?sample_rate=16000&account_id={
 **Receiving transcription:**
 ```json
 {
+  "type": "transcript",
   "text": "The patient reports feeling tired",
-  "isFinal": false
+  "isFinal": false,
+  "is_final": false
 }
 ```
 
+**Error message:**
+```json
+{
+  "type": "error",
+  "error": "An error occurred during transcription",
+  "timestamp": "2026-04-22T14:32:12.123Z"
+}
+```
+
+- Wait for the `status: connected` message before sending audio
 - `text`: The transcribed text for the current segment
-- `isFinal`: When `true`, this segment is complete and will not change
+- `is_final`: Canonical finality flag for the current segment
+- `isFinal`: Compatibility alias for `is_final`
+- `type: "error"` indicates a transcription problem. Some runtime errors are
+  non-terminal, while other failures are followed by socket closure.
 
 ### Basic WebSocket Connection
 
@@ -237,19 +329,31 @@ const ws = new WebSocket(
 // Track transcription segments
 const segments: string[] = [];
 let currentIndex = 0;
+let streamReady = false;
 
 ws.onopen = () => {
-  console.log('Connected to transcription stream');
+  console.log('Socket opened, waiting for stream readiness...');
 };
 
 ws.onmessage = (event) => {
   const data = JSON.parse(event.data);
 
-  if (data.text) {
-    segments[currentIndex] = data.text;
+  if (data.type === 'status') {
+    streamReady = data.status === 'connected';
+    console.log(`Stream status: ${data.status}`);
+    return;
+  }
 
-    // isFinal indicates this segment is complete
-    if (data.isFinal) {
+  if (data.type === 'error') {
+    console.warn('Transcription stream error:', data.error);
+    return;
+  }
+
+  if (data.type === 'transcript' && data.text) {
+    segments[currentIndex] = data.text;
+    const isFinal = data.is_final ?? data.isFinal ?? false;
+
+    if (isFinal) {
       console.log(`Segment ${currentIndex}: ${data.text}`);
       currentIndex++;
     }
@@ -268,6 +372,11 @@ ws.onclose = (event) => {
 
 // Send audio data (from microphone, file, etc.)
 function sendAudio(audioBuffer: ArrayBuffer) {
+  if (!streamReady) {
+    console.warn('Stream not ready yet; wait for the connected status message.');
+    return;
+  }
+
   const base64Audio = btoa(
     String.fromCharCode(...new Uint8Array(audioBuffer))
   );
@@ -291,25 +400,41 @@ async def stream_transcription():
 
     segments = []
     current_index = 0
+    stream_ready = False
 
     async with websockets.connect(url) as ws:
-        print("Connected to transcription stream")
+        print("Socket opened, waiting for stream readiness...")
 
         async def receive_messages():
-            nonlocal current_index
+            nonlocal current_index, stream_ready
             async for message in ws:
                 data = json.loads(message)
-                if "text" in data:
+
+                if data.get("type") == "status":
+                    stream_ready = data.get("status") == "connected"
+                    print(f"Stream status: {data.get('status')}")
+                    continue
+
+                if data.get("type") == "error":
+                    print(f"Transcription stream error: {data.get('error')}")
+                    continue
+
+                if data.get("type") == "transcript" and "text" in data:
                     # Extend segments list if needed
                     while len(segments) <= current_index:
                         segments.append("")
                     segments[current_index] = data["text"]
 
-                    if data.get("isFinal"):
+                    is_final = data.get("is_final", data.get("isFinal", False))
+                    if is_final:
                         print(f"Segment {current_index}: {data['text']}")
                         current_index += 1
 
         async def send_audio(audio_data: bytes):
+            if not stream_ready:
+                print("Stream not ready yet; wait for the connected status message.")
+                return
+
             base64_audio = base64.b64encode(audio_data).decode("utf-8")
             await ws.send(json.dumps({"audio": base64_audio}))
 
@@ -339,6 +464,7 @@ Real-time audio streaming in production requires handling network interruptions,
 2. **Token expiration** - Streaming tokens have limited validity
 3. **Audio continuity** - Buffering audio during reconnection to prevent data loss
 4. **State recovery** - Resuming transcription context after reconnection
+5. **Error frames** - Some server error messages are non-terminal, while others precede disconnects
 
 ### Reconnection with Exponential Backoff
 
@@ -366,6 +492,13 @@ function calculateBackoff(
 ### Production WebSocket Implementation
 
 The following implementation handles reconnection, audio buffering, and error recovery:
+
+<Note>
+This example reconnects on close events and connection failures. In your own
+implementation, surface `type: "error"` messages immediately, but do not assume
+every error frame is terminal. Some runtime errors are followed by later stream
+messages, while other failures are followed by socket closure.
+</Note>
 
 <CodeGroup>
 ```typescript TypeScript
@@ -1037,6 +1170,7 @@ if __name__ == "__main__":
 | Token expired (401) | Fetch new token, reconnect |
 | Rate limited (429) | Use `Retry-After` header, increase backoff |
 | Server error (5xx) | Retry with backoff |
+| WebSocket error message | Surface to caller, keep listening for follow-up messages, reconnect if the socket closes |
 | Invalid audio format | Check sample rate, encoding |
 | Network disconnect | Reconnect with buffered audio |
 

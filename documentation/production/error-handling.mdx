@@ -428,7 +428,7 @@ SDK errors include helpful properties for debugging and logging:
 
 ## WebSocket Error Recovery
 
-Real-time streaming connections require special error handling for connection drops, token expiration, and state recovery.
+Real-time streaming connections require special error handling for connection drops, token expiration, server error messages that may or may not be terminal, and state recovery.
 
 ### Connection Drops
 
@@ -460,6 +460,48 @@ class StreamConnection {
   }
 }
 ```
+
+### Server Error Messages
+
+The streaming API can send error frames before either continuing the session or closing it:
+
+```json
+{
+  "type": "error",
+  "error": "An error occurred during transcription",
+  "timestamp": "2026-04-22T14:32:12.123Z"
+}
+```
+
+Handle these separately from disconnects:
+
+```typescript
+ws.onmessage = (event) => {
+  const message = JSON.parse(event.data);
+
+  if (message.type === 'error') {
+    console.warn('Streaming transcription error:', message.error);
+    return;
+  }
+
+  if (message.type === 'status') {
+    console.log(`Streaming status: ${message.status}`);
+    return;
+  }
+
+  if (message.type === 'transcript') {
+    // Process transcript segment here
+  }
+};
+```
+
+<Note>
+Treat `type: "error"` messages as signals to surface immediately, not as a
+definitive reconnect trigger. Some runtime errors are followed by later
+transcript or status messages, while other failures are followed by socket
+closure. Reconnect when the socket closes or another terminal condition is
+observed.
+</Note>
 
 ### Token Expiration
 

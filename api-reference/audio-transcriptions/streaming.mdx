@@ -29,15 +29,16 @@ Endpoint:<br/>`wss://api.sully.ai/v1/audio/transcriptions/stream?account_id=1234
     The language of your submitted audio. See our [Supported Languages](/api-reference/audio-transcriptions/languages) documentation for a complete list of language options.
 </ParamField>
 
-<ParamField query="sample_rate" type="string">
-    The sample rate of your submitted audio.
+<ParamField query="sample_rate" type="string" default="16000">
+    The sample rate of your submitted audio. If omitted, the streaming service currently defaults to `16000`.
+    For raw, headerless audio, send the actual sample rate of your stream explicitly.
 </ParamField>
 
 <ParamField query="encoding" type="string">
       Specifies the encoding format of the audio being sent.
       
-      <b>Important:</b> This parameter is <b>required</b> when transmitting raw, unstructured audio packets without headers. 
-      If the audio data is encapsulated within a container format, this parameter should be omitted.
+      <b>Important:</b> This parameter is <b>required</b> when transmitting raw, unstructured audio packets without headers.
+      If the audio data is encapsulated within a container format, this parameter should be omitted. When <code>sample_rate</code> is omitted, the streaming service currently still defaults it to <code>16000</code>.
 
       <b>Supported formats:</b>
       <ul>
@@ -53,6 +54,10 @@ Endpoint:<br/>`wss://api.sully.ai/v1/audio/transcriptions/stream?account_id=1234
         <li><code>speex</code>: An open-source, speech-specific audio codec</li>
         <li><code>g729</code>: G729 low-bandwidth codec (usable with raw or containerized audio)</li>
       </ul>
+</ParamField>
+
+<ParamField query="dictation" type="boolean" default="false">
+    Requests dictation-oriented transcript formatting for the stream.
 </ParamField>
 
 <ParamField query="account_id" type="string">
@@ -77,7 +82,9 @@ Upon successful connection, the server sends a status message:
 
 ```json
 {
+  "type": "status",
   "status": "connected",
+  "timestamp": "2026-04-22T14:32:07.123Z"
 }
 ```
 
@@ -85,12 +92,35 @@ When the connection closes:
 
 ```json
 {
+  "type": "status",
   "status": "disconnected",
+  "timestamp": "2026-04-22T14:32:17.123Z"
 }
 ```
 
 <Note>
-  **Important:** Wait for the "status": "connected" message before sending audio data. This ensures the server is ready to process your stream.
+  **Important:** Wait for the `type: "status"` / `status: "connected"` message before sending audio data. This ensures the server is ready to process your stream.
+</Note>
+
+## Error Messages
+
+During a live stream, the server may also send an error message:
+
+```json
+{
+  "type": "error",
+  "error": "An error occurred during transcription",
+  "timestamp": "2026-04-22T14:32:12.123Z"
+}
+```
+
+<Note>
+  An error message signals a transcription problem, but it does not always mean
+  the session is over. Some runtime error frames are non-terminal and may be
+  followed by later transcript or status messages, while other failures are
+  followed by socket closure. Surface the error immediately, then keep
+  listening for follow-up messages and reconnect when the socket actually
+  closes.
 </Note>
 
 # Streaming input audio
@@ -112,7 +142,7 @@ The client can send messages with audio input to the server. The messages can co
 
 ## Streaming output audio
 
-The server will always respond with a message containing the following fields:
+Transcript messages contain the following fields:
 
 ```json Response message
 {
