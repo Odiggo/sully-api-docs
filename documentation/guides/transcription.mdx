@@ -259,11 +259,17 @@ wss://api.sully.ai/v1/audio/transcriptions/stream?sample_rate=16000&account_id={
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
-| `sample_rate` | Yes | Audio sample rate in Hz (e.g., `16000`, `44100`) |
+| `sample_rate` | No | Audio sample rate in Hz (e.g., `16000`, `44100`). If omitted, the streaming service currently defaults to `16000`. For raw, headerless audio, send the actual sample rate explicitly. |
 | `account_id` | Yes | Your Sully account ID |
 | `api_token` | Yes | Token from the stream token endpoint |
 | `language` | No | BCP47 language tag (e.g., `en`, `es`, `multi`) |
 | `dictation` | No | Set to `true` to request dictation-oriented transcript formatting |
+
+<Note>
+For raw, headerless audio, send both `encoding` and `sample_rate`. For
+containerized audio, omit `encoding`. If `sample_rate` is omitted, the current
+streaming service still defaults it to `16000`.
+</Note>
 
 ### Message Format
 

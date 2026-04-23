@@ -29,15 +29,16 @@ Endpoint:<br/>`wss://api.sully.ai/v1/audio/transcriptions/stream?account_id=1234
     The language of your submitted audio. See our [Supported Languages](/api-reference/audio-transcriptions/languages) documentation for a complete list of language options.
 </ParamField>
 
-<ParamField query="sample_rate" type="string">
-    The sample rate of your submitted audio.
+<ParamField query="sample_rate" type="string" default="16000">
+    The sample rate of your submitted audio. If omitted, the streaming service currently defaults to `16000`.
+    For raw, headerless audio, send the actual sample rate of your stream explicitly.
 </ParamField>
 
 <ParamField query="encoding" type="string">
       Specifies the encoding format of the audio being sent.
       
-      <b>Important:</b> This parameter is <b>required</b> when transmitting raw, unstructured audio packets without headers. 
-      If the audio data is encapsulated within a container format, this parameter should be omitted.
+      <b>Important:</b> This parameter is <b>required</b> when transmitting raw, unstructured audio packets without headers.
+      If the audio data is encapsulated within a container format, this parameter should be omitted. When <code>sample_rate</code> is omitted, the streaming service currently still defaults it to <code>16000</code>.
 
       <b>Supported formats:</b>
       <ul>
