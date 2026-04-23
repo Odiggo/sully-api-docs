@@ -428,7 +428,7 @@ SDK errors include helpful properties for debugging and logging:
 
 ## WebSocket Error Recovery
 
-Real-time streaming connections require special error handling for connection drops, token expiration, advisory error messages, and state recovery.
+Real-time streaming connections require special error handling for connection drops, token expiration, server error messages that may or may not be terminal, and state recovery.
 
 ### Connection Drops
 
@@ -463,7 +463,7 @@ class StreamConnection {
 
 ### Server Error Messages
 
-The streaming API can send advisory error frames while the socket remains open:
+The streaming API can send error frames before either continuing the session or closing it:
 
 ```json
 {
@@ -496,9 +496,11 @@ ws.onmessage = (event) => {
 ```
 
 <Note>
-Treat `type: "error"` messages as advisory. Surface them to logs or the UI, but
-continue listening for later transcript or status messages. Reconnect only after
-the socket closes or your client detects another terminal condition.
+Treat `type: "error"` messages as signals to surface immediately, not as a
+definitive reconnect trigger. Some runtime errors are followed by later
+transcript or status messages, while other failures are followed by socket
+closure. Reconnect when the socket closes or another terminal condition is
+observed.
 </Note>
 
 ### Token Expiration

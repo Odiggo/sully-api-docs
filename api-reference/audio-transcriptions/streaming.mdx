@@ -114,10 +114,12 @@ During a live stream, the server may also send an error message:
 ```
 
 <Note>
-  Treat error messages as advisory. They signal a problem during transcription,
-  but they do not necessarily mean the WebSocket has closed. Continue listening
-  for later transcript or status messages, and reconnect only after the socket
-  closes or you receive a disconnected status.
+  An error message signals a transcription problem, but it does not always mean
+  the session is over. Some runtime error frames are non-terminal and may be
+  followed by later transcript or status messages, while other failures are
+  followed by socket closure. Surface the error immediately, then keep
+  listening for follow-up messages and reconnect when the socket actually
+  closes.
 </Note>
 
 # Streaming input audio

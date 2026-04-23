@@ -201,7 +201,7 @@ Stream audio in real-time during patient visits for immediate transcription feed
 2. Connect       wss://api.sully.ai/v1/audio/transcriptions/stream?...
 3. Wait for      { "type": "status", "status": "connected" }
 4. Send audio    { "audio": "<base64-encoded-audio>" }
-5. Receive       status, transcript, and advisory error messages
+5. Receive       status, transcript, and error messages
 6. Close         ws.close()
 ```
 
@@ -291,7 +291,7 @@ wss://api.sully.ai/v1/audio/transcriptions/stream?sample_rate=16000&account_id={
 }
 ```
 
-**Advisory error message:**
+**Error message:**
 ```json
 {
   "type": "error",
@@ -304,8 +304,8 @@ wss://api.sully.ai/v1/audio/transcriptions/stream?sample_rate=16000&account_id={
 - `text`: The transcribed text for the current segment
 - `is_final`: Canonical finality flag for the current segment
 - `isFinal`: Compatibility alias for `is_final`
-- `type: "error"` indicates a transcription problem, but it does not by itself
-  mean the socket has closed
+- `type: "error"` indicates a transcription problem. Some runtime errors are
+  non-terminal, while other failures are followed by socket closure.
 
 ### Basic WebSocket Connection
 
@@ -458,7 +458,7 @@ Real-time audio streaming in production requires handling network interruptions,
 2. **Token expiration** - Streaming tokens have limited validity
 3. **Audio continuity** - Buffering audio during reconnection to prevent data loss
 4. **State recovery** - Resuming transcription context after reconnection
-5. **Advisory error frames** - Some server error messages do not immediately close the socket
+5. **Error frames** - Some server error messages are non-terminal, while others precede disconnects
 
 ### Reconnection with Exponential Backoff
 
@@ -489,9 +489,9 @@ The following implementation handles reconnection, audio buffering, and error re
 
 <Note>
 This example reconnects on close events and connection failures. In your own
-implementation, treat `type: "error"` messages as advisory stream events:
-surface them to the caller, but do not force a reconnect unless the socket
-actually closes.
+implementation, surface `type: "error"` messages immediately, but do not assume
+every error frame is terminal. Some runtime errors are followed by later stream
+messages, while other failures are followed by socket closure.
 </Note>
 
 <CodeGroup>
@@ -1164,7 +1164,7 @@ if __name__ == "__main__":
 | Token expired (401) | Fetch new token, reconnect |
 | Rate limited (429) | Use `Retry-After` header, increase backoff |
 | Server error (5xx) | Retry with backoff |
-| WebSocket error message | Surface to caller, keep listening, reconnect only if the socket closes |
+| WebSocket error message | Surface to caller, keep listening for follow-up messages, reconnect if the socket closes |
 | Invalid audio format | Check sample rate, encoding |
 | Network disconnect | Reconnect with buffered audio |
 
