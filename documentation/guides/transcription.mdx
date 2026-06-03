@@ -1180,20 +1180,21 @@ Always implement a maximum reconnection limit. Infinite reconnection loops can d
 
 ## Language Support
 
-Sully.ai supports transcription in multiple languages using [BCP47 language tags](https://en.wikipedia.org/wiki/IETF_language_tag).
+Sully.ai supports transcription in multiple languages using [BCP47 language tags](https://en.wikipedia.org/wiki/IETF_language_tag). See [Supported Languages](/api-reference/audio-transcriptions/languages) for the full list of **89** accepted locale codes.
 
-### Supported Languages
+### Common language tags
 
-| Language | Tag | Regional Variants |
-|----------|-----|-------------------|
-| English | `en` | `en-US`, `en-GB`, `en-AU` |
-| Spanish | `es` | `es-US`, `es-ES`, `es-MX` |
-| Chinese | `zh` | `zh-CN`, `zh-TW` |
-| French | `fr` | `fr-FR`, `fr-CA` |
-| German | `de` | `de-DE` |
-| Portuguese | `pt` | `pt-BR`, `pt-PT` |
-| Japanese | `ja` | `ja-JP` |
-| Korean | `ko` | `ko-KR` |
+| Language | Tags |
+|----------|------|
+| English | `en`, `en-US`, `en-CA`, `en-IE`, `en-AU`, `en-GB`, `en-NZ`, `en-IN` |
+| Spanish | `es`, `es-419` |
+| Chinese | `zh`, `zh-CN`, `zh-Hans`, `zh-TW`, `zh-Hant`, `zh-HK` |
+| French | `fr`, `fr-CA` |
+| German | `de`, `de-CH` |
+| Portuguese | `pt`, `pt-BR`, `pt-PT` |
+| Japanese | `ja` |
+| Korean | `ko`, `ko-KR` |
+| Arabic | `ar`, `ar-EG`, `ar-SA`, and other regional `ar-*` tags (see full list) |
 
 ### Multilingual Mode
 
@@ -1233,7 +1234,7 @@ wss://api.sully.ai/v1/audio/transcriptions/stream?sample_rate=16000&account_id={
 ```
 
 <Note>
-Audio in languages other than the specified language will be filtered out. Use `multi` if your conversations include multiple languages.
+For most locale codes, audio in other languages is filtered out. Base tags such as `es`, `fr`, and `de` route to multilingual code-switching instead — see [automatic multilingual routing](/api-reference/audio-transcriptions/languages#automatic-multilingual-routing). Use `multi` on streaming when speakers switch languages freely.
 </Note>
 
 ## Choosing Upload vs Stream

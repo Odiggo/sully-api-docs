@@ -1,11 +1,11 @@
 ---
 title: 'Multi-Language Support'
-description: 'Handle international and multilingual clinical encounters with 50+ supported languages'
+description: 'Handle international and multilingual clinical encounters with 50+ languages and 89 BCP47 tags'
 ---
 
 ## Overview
 
-Sully.ai supports transcription and note generation in over 50 languages, enabling healthcare providers to document clinical encounters in the patient's preferred language. The API offers two modes for language handling:
+Sully.ai supports transcription and note generation in over 50 languages (**89** accepted [BCP47](https://en.wikipedia.org/wiki/IETF_language_tag) tags — see [Supported Languages](/api-reference/audio-transcriptions/languages)), enabling healthcare providers to document clinical encounters in the patient's preferred language. The API offers two modes for language handling:
 
 | Mode | Best For | Behavior |
 |------|----------|----------|
@@ -18,45 +18,62 @@ Generated clinical notes are produced in the same language as the transcript, en
 
 ## Supported Languages
 
-Sully.ai supports the following languages using [BCP47 language tags](https://en.wikipedia.org/wiki/IETF_language_tag):
+The full list of accepted BCP47 tags is maintained in [Supported Languages](/api-reference/audio-transcriptions/languages). Highlights:
 
 | Language | BCP47 Tags |
 |----------|------------|
+| Arabic | `ar`, `ar-AE`, `ar-SA`, `ar-QA`, `ar-KW`, `ar-SY`, `ar-LB`, `ar-PS`, `ar-JO`, `ar-EG`, `ar-SD`, `ar-TD`, `ar-MA`, `ar-DZ`, `ar-TN`, `ar-IQ`, `ar-IR` |
+| Belarusian | `be` |
+| Bengali | `bn` |
+| Bosnian | `bs` |
 | Bulgarian | `bg` |
 | Catalan | `ca` |
-| Chinese (Mandarin Simplified) | `zh`, `zh-CN`, `zh-Hans` |
-| Chinese (Mandarin Traditional) | `zh-TW`, `zh-Hant` |
-| Chinese (Cantonese) | `zh-HK` |
+| Chinese (Mandarin, Simplified) | `zh`, `zh-CN`, `zh-Hans` |
+| Chinese (Mandarin, Traditional) | `zh-TW`, `zh-Hant` |
+| Chinese (Cantonese, Traditional) | `zh-HK` |
+| Croatian | `hr` |
 | Czech | `cs` |
 | Danish | `da`, `da-DK` |
 | Dutch | `nl` |
-| English | `en`, `en-US`, `en-AU`, `en-GB`, `en-NZ`, `en-IN` |
+| English | `en`, `en-US`, `en-CA`, `en-IE`, `en-AU`, `en-GB`, `en-NZ`, `en-IN` |
 | Estonian | `et` |
 | Finnish | `fi` |
 | Flemish | `nl-BE` |
 | French | `fr`, `fr-CA` |
 | German | `de`, `de-CH` |
 | Greek | `el` |
+| Gujarati | `gu`, `gu-IN` |
+| Hebrew | `he` |
 | Hindi | `hi` |
 | Hungarian | `hu` |
 | Indonesian | `id` |
 | Italian | `it` |
 | Japanese | `ja` |
+| Kannada | `kn` |
 | Korean | `ko`, `ko-KR` |
 | Latvian | `lv` |
 | Lithuanian | `lt` |
+| Macedonian | `mk` |
 | Malay | `ms` |
+| Marathi | `mr` |
 | Norwegian | `no` |
+| Persian | `fa` |
 | Polish | `pl` |
 | Portuguese | `pt`, `pt-BR`, `pt-PT` |
 | Romanian | `ro` |
 | Russian | `ru` |
+| Serbian | `sr` |
 | Slovak | `sk` |
+| Slovenian | `sl` |
 | Spanish | `es`, `es-419` |
 | Swedish | `sv`, `sv-SE` |
+| Tagalog | `tl` |
+| Tamil | `ta` |
+| Telugu | `te` |
 | Thai | `th`, `th-TH` |
 | Turkish | `tr` |
 | Ukrainian | `uk` |
+| Urdu | `ur` |
 | Vietnamese | `vi` |
 
 ---
@@ -190,17 +207,19 @@ For clinical encounters where multiple languages are spoken (such as with an int
 
 ### Supported Languages for Multilingual Mode
 
-Multilingual mode works well with the following languages:
+Multilingual mode works well with the following languages (pass `multi`, or any of these base tags — they route to the same multilingual code-switching behavior):
 
-- Dutch
-- French
-- German
-- Hindi
-- Italian
-- Japanese
-- Portuguese
-- Russian
-- Spanish
+- Dutch (`nl`)
+- French (`fr`)
+- German (`de`)
+- Hindi (`hi`)
+- Italian (`it`)
+- Japanese (`ja`)
+- Portuguese (`pt`)
+- Russian (`ru`)
+- Spanish (`es`)
+
+Use a regional tag (for example `es-419`) when you need Spanish without automatic multilingual routing. See [Supported Languages](/api-reference/audio-transcriptions/languages#automatic-multilingual-routing).
 
 ### File Upload with Multilingual Mode
 

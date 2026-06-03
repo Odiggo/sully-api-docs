@@ -6,8 +6,8 @@ body.append('audio', audioBuffer, {
   contentType: 'audio/mpeg',
 });
 
-// Transcribe a conversation in US Spanish
-const response = await fetch('https://api.sully.ai/v1/audio/transcriptions?language=es-US', {
+// Transcribe a conversation in Latin American Spanish
+const response = await fetch('https://api.sully.ai/v1/audio/transcriptions?language=es-419', {
   method: 'POST',
   headers: { 
     'X-Api-Key': 'your-api-key',
